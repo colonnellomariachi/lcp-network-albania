@@ -1,0 +1,29 @@
+# R workspace files
+.RData
+.RDataTmp
+.RDataTmp1
+.Rhistory
+.Rproj.user/
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Large raster / cost-surface files and generated outputs (host on Zenodo instead)
+data/
+output/rds/*.rds
+output/rds/*.gpkg
+output/tables/*.csv
+output/images
+
+# Superseded/exploratory code and internal working notes — content archived
+# in the Zenodo supplementary material, not tracked here
+archive/
+REFACTOR_NOTES.md
+
+# Claude Code local session files
+/.claude
+CLAUDE.md
+.Rproj.user
+.httr-oauth
+.quarto

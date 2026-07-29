@@ -1,0 +1,6 @@
+"id_sito","def_sito","tipo_sito","top_ant","comune","localita","Longit","Latitud","earliest_start","latest_end","in_hellenistic","in_roman","in_hell_network","in_rom_network","dual_phase","overlaps_hell"
+"DUR054","mansio/statio","minor settlement",NA,"Kavaja","Kryeluz","383453.971079867","4555046.55668068",-27,600,FALSE,TRUE,FALSE,TRUE,FALSE,FALSE
+"DUR022","mansio/statio","minor settlement",NA,"Paper","Paper","411384.154011958","4545537.93923649",-27,284,FALSE,TRUE,FALSE,TRUE,FALSE,FALSE
+"DUR024","mansio/statio","minor settlement",NA,"Elbasan","Bradashesh","417742.867382072","4550771.98299689",-27,600,FALSE,TRUE,FALSE,TRUE,FALSE,FALSE
+"DUR059","mansio/statio","minor settlement",NA,"Kruja","Burizane","392935.537154415","4595735.66129614",0,300,FALSE,TRUE,FALSE,TRUE,FALSE,FALSE
+"DUR102","mansio/statio","minor settlement",NA,"Rromanat",NA,"382296.630672312","4571264.83252326",100,600,FALSE,TRUE,FALSE,TRUE,FALSE,FALSE

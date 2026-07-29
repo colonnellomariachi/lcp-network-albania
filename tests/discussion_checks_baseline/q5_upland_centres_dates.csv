@@ -1,0 +1,5 @@
+"id_sito","def_sito","tipo_sito","top_ant","comune","localita","Longit","Latitud","earliest_start","latest_end","in_hellenistic","in_roman","in_hell_network","in_rom_network","dual_phase"
+"DUR032","centro fortificato","minor settlement",NA,NA,"Dorez","394708.492963812","4564681.08236212",-600,500,TRUE,TRUE,TRUE,TRUE,TRUE
+"DUR025","centro fortificato","urban settlement",NA,"Petresh","Shenlliu","416553.139185203","4550835.79852272",-700,0,TRUE,TRUE,TRUE,TRUE,TRUE
+"DUR053","centro fortificato","minor settlement",NA,"Kavaje","Mlik","389647.989857728","4555418.87837163",-400,600,TRUE,TRUE,TRUE,TRUE,TRUE
+"DUR015","cittï¿½","urban settlement",NA,"Kruja","Zgerdesh","397923.216216533","4592298.70297557",-700,600,TRUE,TRUE,TRUE,TRUE,TRUE

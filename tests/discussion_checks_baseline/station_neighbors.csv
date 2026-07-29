@@ -1,0 +1,24 @@
+"source","neighbor","def_sito","comune","module","own_module","inter_modular"
+"DUR022","DUR141","sepoltura","Elbasan",NA,NA,FALSE
+"DUR024","DUR017","vicus","Elbasan",NA,NA,FALSE
+"DUR024","DUR025","centro fortificato","Petresh",NA,NA,FALSE
+"DUR024","DUR028","villa","Shirgjan",NA,NA,FALSE
+"DUR054","DUR050","necropoli","Kavaje",4,6,TRUE
+"DUR054","DUR056","necropoli","Kavaje",6,6,FALSE
+"DUR054","DUR062","complesso funerario","Shtodher",4,6,TRUE
+"DUR054","DUR063","villa","Luz i Vogel",6,6,FALSE
+"DUR054","DUR064","fattoria","Luz i Vogel",6,6,FALSE
+"DUR054","DUR065","fattoria","Shkozet",6,6,FALSE
+"DUR054","DUR066","complesso funerario","Gose",6,6,FALSE
+"DUR054","DUR112","insediamento generico","Beden",6,6,FALSE
+"DUR054","DUR113","necropoli","Luz i Vogel",6,6,FALSE
+"DUR054","DUR114","necropoli","Luz i Vogel",6,6,FALSE
+"DUR059","DUR015","cittï¿½","Kruja",NA,NA,FALSE
+"DUR102","DUR033","insediamento generico","Rashbull",3,3,FALSE
+"DUR102","DUR043","insediamento generico","Hardhistha",3,3,FALSE
+"DUR102","DUR044","insediamento generico","Hardishta",3,3,FALSE
+"DUR102","DUR045","insediamento generico","Golem",4,3,TRUE
+"DUR102","DUR046","villa","Golem",4,3,TRUE
+"DUR102","DUR128","villa","Shijak",3,3,FALSE
+"DUR102","DUR129","villa","Shijak",3,3,FALSE
+"DUR102","DUR130","insediamento generico","Shijak",3,3,FALSE

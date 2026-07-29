@@ -1,0 +1,6 @@
+"id_sito","module","n_members_module","degree","betweenness_norm","n_neighbours","n_intra","n_inter","n_not_in_giant","prop_inter","inter_modules","role"
+"DUR022",NA,NA,1,0,1,NA,NA,1,NA,NA,"outside giant"
+"DUR024",NA,NA,3,0.000467508181393174,3,NA,NA,3,NA,NA,"outside giant"
+"DUR054",6,22,10,0.025165311130954,10,8,2,0,0.2,"4","hub locale"
+"DUR059",NA,NA,1,0,1,NA,NA,1,NA,NA,"outside giant"
+"DUR102",3,7,8,0.0198921194327718,8,6,2,0,0.25,"4","hub locale"
