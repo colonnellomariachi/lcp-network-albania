@@ -203,7 +203,4 @@ the Zenodo supplementary material rather than as a file here.
 
 ## License
 
-Code: [PLACEHOLDER — e.g., MIT]. The archaeological dataset carries a
-separate licence, described in the Zenodo record rather than in this
-repository; see the data-sharing note in the manuscript's data availability
-statement before reusing `sites.gpkg`.
+Code: MIT
