@@ -1,0 +1,25 @@
+"id_sito","def_sito","tipo_sito","localita","earliest_start","latest_end","active_periods","rom_periods_450","rom_periods_300","in_roman_end300","degree","betweenness_norm","rank_betweenness","isolate","start_ge_300","late_antique_only","focus_site"
+"DUR042","centro fortificato","minor settlement","Tirana",300,600,"qua_dc,qui_dc,ses_dc","qua_dc,qui_dc","",FALSE,2,0.000350631136044881,60,FALSE,TRUE,TRUE,FALSE
+"DUR109","basilica paleocristiana","sacred place","Qerret",300,600,"qua_dc,qui_dc,ses_dc","qua_dc,qui_dc","",FALSE,14,0.0238849166122018,17,FALSE,TRUE,TRUE,FALSE
+"DUR112","insediamento generico","minor settlement","Kodra e Kishes",300,500,"qua_dc,qui_dc","qua_dc,qui_dc","",FALSE,14,0.023795925065881,19,FALSE,TRUE,TRUE,FALSE
+"DUR113","necropoli","minor settlement","Lekaj",300,500,"qua_dc,qui_dc","qua_dc,qui_dc","",FALSE,12,0.00547062691697022,41,FALSE,TRUE,TRUE,FALSE
+"DUR114","necropoli","rural settlement","Luz i Madhe",300,600,"qua_dc,qui_dc,ses_dc","qua_dc,qui_dc","",FALSE,13,0.00663257921452001,37,FALSE,TRUE,TRUE,FALSE
+"DUR122","insediamento generico","minor settlement","Sulzotaj",300,400,"qua_dc","qua_dc","",FALSE,7,0.000442904716412247,58,FALSE,TRUE,TRUE,FALSE
+"DUR138","insediamento generico","minor settlement","Met Hasanaj?",300,600,"qua_dc,qui_dc,ses_dc","qua_dc,qui_dc","",FALSE,4,0,65,FALSE,TRUE,TRUE,FALSE
+"DUR020","centro fortificato","urban settlement","Kruja",400,700,"qui_dc,ses_dc,sett_dc","qui_dc","",FALSE,1,0,65,FALSE,TRUE,TRUE,FALSE
+"DUR135","centro fortificato","minor settlement","Kalaja e Turres",400,600,"qui_dc,ses_dc","qui_dc","",FALSE,3,0,65,FALSE,TRUE,TRUE,FALSE
+"DUR045","insediamento generico","minor settlement","Tilaj",-500,600,"qui_ac,qua_ac,ter_ac,sec_ac,qua_dc,qui_dc,ses_dc","qua_dc,qui_dc","",FALSE,15,0.0365203559668366,12,FALSE,FALSE,TRUE,FALSE
+"DUR006","centro fortificato","minor settlement","Porto Romano",-400,600,"qua_ac,ter_ac,sec_ac,lateant,qua_dc,qui_dc,ses_dc","lateant,qua_dc,qui_dc","",FALSE,8,0,65,FALSE,FALSE,TRUE,FALSE
+"DUR038","necropoli","minor settlement","Rubjek",-400,600,"qua_ac,ter_ac,qua_dc,qui_dc,ses_dc","qua_dc,qui_dc","",FALSE,3,0,65,FALSE,FALSE,TRUE,FALSE
+"DUR002","basilica paleocristiana","sacred place","Arapaj",284,700,"lateant,qui_dc,ses_dc,sett_dc","lateant,qui_dc","",FALSE,13,0.0892568663679339,2,FALSE,FALSE,TRUE,TRUE
+"DUR010","insediamento generico","minor settlement","Kallm",284,600,"lateant,qua_dc,qui_dc,ses_dc","lateant,qua_dc,qui_dc","",FALSE,10,0.0033360679205763,45,FALSE,FALSE,TRUE,FALSE
+"DUR016","basilica paleocristiana","sacred place","Gjuricai",284,600,"lateant,ses_dc","lateant","",FALSE,0,0,65,TRUE,FALSE,TRUE,TRUE
+"DUR021","centro fortificato","minor settlement","Petrela",284,700,"lateant,qua_dc,qui_dc,ses_dc,sett_dc","lateant,qua_dc,qui_dc","",FALSE,1,0,65,FALSE,FALSE,TRUE,FALSE
+"DUR030","centro fortificato","minor settlement","Ndroq",284,600,"lateant,qua_dc,qui_dc,ses_dc","lateant,qua_dc,qui_dc","",FALSE,0,0,65,TRUE,FALSE,TRUE,TRUE
+"DUR031","necropoli","minor settlement","Rrogozhine",284,600,"lateant,qua_dc,qui_dc,ses_dc","lateant,qua_dc,qui_dc","",FALSE,6,0.00350631136044881,42,FALSE,FALSE,TRUE,FALSE
+"DUR034","necropoli","minor settlement","Golem",284,600,"lateant,qua_dc,qui_dc,ses_dc","lateant,qua_dc,qui_dc","",FALSE,14,0.0496536524863931,9,FALSE,FALSE,TRUE,FALSE
+"DUR040","villa","rural settlement","Kodra e Zurit",284,600,"lateant,qua_dc,qui_dc,ses_dc","lateant,qua_dc,qui_dc","",FALSE,4,0.0570359981299673,8,FALSE,FALSE,TRUE,FALSE
+"DUR052","insediamento generico","minor settlement","Lis Patros",284,600,"lateant,qui_dc","lateant,qui_dc","",FALSE,0,0,65,TRUE,FALSE,TRUE,FALSE
+"DUR056","necropoli","minor settlement","Harizay",284,600,"lateant,qua_dc","lateant,qua_dc","",FALSE,13,0.0803963726751401,3,FALSE,FALSE,TRUE,FALSE
+"DUR032","centro fortificato","minor settlement","Dorez",-600,500,"ses_ac,qui_ac,qua_ac,ter_ac,sec_ac,pri_ac,qua_dc,qui_dc","pri_ac,qua_dc,qui_dc","pri_ac",TRUE,1,0,65,FALSE,FALSE,FALSE,TRUE
+"DUR053","centro fortificato","minor settlement","Mlik",-400,600,"qua_ac,ter_ac,sec_ac,pri_ac,imper,lateant,pri_dc,sec_dc,ter_dc,qua_dc,qui_dc,ses_dc","pri_ac,imper,lateant,pri_dc,sec_dc,ter_dc,qua_dc,qui_dc","pri_ac,imper,pri_dc,sec_dc,ter_dc",TRUE,0,0,65,TRUE,FALSE,FALSE,TRUE

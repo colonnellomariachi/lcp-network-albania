@@ -4,6 +4,8 @@
 #
 # Consolidates Q1–Q6 (chronological threshold analysis, §5.2) and the
 # road-station network analysis (§5.5) previously run in interactive sessions.
+# Q7 (late-antique horizon of the Roman network, Task 9 / reviewer 1) mirrors
+# Q1 at the other end of the Roman window.
 # No analytical parameters are changed; this script only formalises the
 # provenance of numbers already in the manuscript.
 #
@@ -29,7 +31,7 @@
 # To initialise the baseline directory (run once after generating the first
 # canonical outputs):
 #   dir.create(here("tests","discussion_checks_baseline"), recursive=TRUE)
-#   for (f in list.files(table_path(), pattern="^(q[1-6]_|road_|station_)",
+#   for (f in list.files(table_path(), pattern="^(q[1-7]_|road_|station_)",
 #                        full.names=TRUE))
 #     file.copy(f, here("tests","discussion_checks_baseline",basename(f)))
 # =============================================================================
@@ -520,6 +522,91 @@ if (!file.exists(egnatia_path)) {
 }
 
 # ---------------------------------------------------------------------------
+# Q7 — Late-antique horizon of the Roman network (mirror of Q1)
+#
+# With ROM_END = 450 and century-coded chronology, sites founded in late
+# antiquity can enter the Roman network. Flags, for every site in siti_rom:
+#   start_ge_300        earliest attested start >= AD 300
+#   in_roman_end300     would pass the Roman-window test with ROM_END = 300
+#   late_antique_only   in the network only through overlap with AD 300-450
+# Focus sites (DUR002, DUR016, DUR030, DUR032, DUR053) are always reported.
+# ROM_END itself is not changed; 300 is used only as a counterfactual.
+# ---------------------------------------------------------------------------
+
+Q7_ALT_ROM_END <- 300
+Q7_FOCUS_IDS   <- c("DUR002", "DUR016", "DUR030", "DUR032", "DUR053")
+
+q7_rows <- lapply(seq_len(nrow(sites_d)), function(ii) {
+  row    <- sites_d[ii, , drop = FALSE]
+  active <- period_cols[sapply(period_cols, function(pp) is_active(row[[pp]]))]
+  if (length(active) == 0L) return(NULL)
+  starts <- sapply(active, function(pp) chrono_dict[[pp]][1])
+  ends   <- sapply(active, function(pp) chrono_dict[[pp]][2])
+  hit_450 <- overlaps_min(starts, ends, ROM_BOUND, ROM_END)
+  hit_300 <- overlaps_min(starts, ends, ROM_BOUND, Q7_ALT_ROM_END)
+  data.frame(
+    id_sito          = row$id_sito,
+    active_periods   = paste(active, collapse = ","),
+    rom_periods_450  = paste(active[hit_450], collapse = ","),
+    rom_periods_300  = paste(active[hit_300], collapse = ","),
+    in_roman_end300  = any(hit_300),
+    stringsAsFactors = FALSE
+  )
+})
+q7_chrono <- do.call(rbind, q7_rows)
+
+q7 <- merge(chrono_base[chrono_base$id_sito %in% rom_ids,
+                        c("id_sito", "def_sito", "tipo_sito", "localita",
+                          "earliest_start", "latest_end")],
+            q7_chrono, by = "id_sito", all.x = TRUE)
+q7_cc <- cc_rom[, c("id_sito", "degree", "betweenness_norm")]
+q7_cc$rank_betweenness <- rank(-q7_cc$betweenness_norm, ties.method = "min")
+q7 <- merge(q7, q7_cc, by = "id_sito", all.x = TRUE)
+
+q7$isolate           <- q7$degree == 0L
+q7$start_ge_300      <- !is.na(q7$earliest_start) & q7$earliest_start >= 300
+q7$late_antique_only <- !q7$in_roman_end300
+q7$focus_site        <- q7$id_sito %in% Q7_FOCUS_IDS
+
+stopifnot("Q7 must cover the 94 Roman sites" = nrow(q7) == 94L)
+
+q7_out <- q7[q7$start_ge_300 | q7$late_antique_only | q7$focus_site, ]
+q7_out <- q7_out[order(-q7_out$start_ge_300, -q7_out$late_antique_only,
+                       q7_out$earliest_start, q7_out$id_sito), ]
+rownames(q7_out) <- NULL
+
+n_ge300 <- sum(q7$start_ge_300)
+n_lao   <- sum(q7$late_antique_only)
+message("Q7: start >= AD 300: ", n_ge300, " / 94 = ",
+        round(n_ge300 / 94 * 100, 1), " % (",
+        paste(q7$id_sito[q7$start_ge_300], collapse = ", "), ")")
+message("Q7: late-antique-only (fail with ROM_END = 300): ", n_lao, " / 94 = ",
+        round(n_lao / 94 * 100, 1), " % (",
+        paste(q7$id_sito[q7$late_antique_only], collapse = ", "), ")")
+for (sid in Q7_FOCUS_IDS) {
+  r <- q7[q7$id_sito == sid, ]
+  message(sprintf("Q7: %s start=%d end=%d btw_rank=%d degree=%d in_roman_end300=%s",
+                  sid, r$earliest_start, r$latest_end, r$rank_betweenness,
+                  r$degree, r$in_roman_end300))
+}
+
+# Stop criterion (Task 9): the upland-centre reading in 11 relies on Dorez and
+# Mliku being in the Roman network independently of the late-antique phase.
+stopifnot(
+  "Q7 start >= AD 300 count must be 9"       = n_ge300 == 9L,
+  "Q7 late-antique-only count must be 22"    = n_lao == 22L,
+  "DUR002 must be late-antique-only"         =
+    isTRUE(q7$late_antique_only[q7$id_sito == "DUR002"]),
+  "DUR032 (Dorez) must be Roman also with ROM_END = 300" =
+    isTRUE(q7$in_roman_end300[q7$id_sito == "DUR032"]),
+  "DUR053 (Mliku) must be Roman also with ROM_END = 300" =
+    isTRUE(q7$in_roman_end300[q7$id_sito == "DUR053"])
+)
+
+write.csv(q7_out, table_path("q7_late_antique_horizon.csv"), row.names = FALSE)
+message("Saved q7_late_antique_horizon.csv")
+
+# ---------------------------------------------------------------------------
 # Regression check
 # ---------------------------------------------------------------------------
 
@@ -530,7 +617,7 @@ if (!dir.exists(baseline_dir)) {
   message("  dir.create(here('tests','discussion_checks_baseline'),",
           " recursive=TRUE)")
   message("  for (f in list.files(table_path(),",
-          " pattern='^(q[1-6]_|road_|station_)', full.names=TRUE))")
+          " pattern='^(q[1-7]_|road_|station_)', full.names=TRUE))")
   message("    file.copy(f,",
           " here('tests','discussion_checks_baseline',basename(f)))")
 } else {

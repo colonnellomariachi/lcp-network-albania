@@ -73,6 +73,20 @@ WAYPOINT_IDS <- c("DUR001", "DUR022", "DUR024", "DUR017")
 DUR024_X_FIXED <- 417306.64305036
 DUR024_Y_FIXED <- 4549673.05871444
 
+# --- Hydrographic sensitivity (12) -------------------------------------------
+# Rivers are crossing penalties, not barriers: the cost of entering a river
+# cell is multiplied by each factor (moderate / strong sensitivity bounds).
+HYDRO_PENALTIES <- c(5, 20)
+# OSM waterway=river snapshot (data/hydro/osm_rivers_raw.json, see
+# output/tables/hydro_source.md). Main stems Ishëm, Erzen, Shkumbin plus the
+# three rivers whose confluence forms the Ishëm (Tërkuzë, Tirana, Zeza).
+HYDRO_RIVER_NAMES <- c("Ishëm", "Erzeni", "Lumi Erzenit", "Shkumbini",
+                       "Tërkuzë", "Lumi i Tërkuzës", "Tiranë", "Lumi i Tiranës",
+                       "Zeza")
+# Lines are buffered before rasterisation so the river band is >= 2 cells
+# wide and cannot be jumped by a 16-neighbour (knight's) move.
+HYDRO_BUFFER_M <- 25
+
 # --- Figure aesthetics -------------------------------------------------------
 PHASE_COLS   <- c(hellenistic = "#D9A441", roman = "#3B6E8F")
 SCATTER_SEED <- 42   # seed for ggrepel label placement
@@ -89,3 +103,4 @@ source(here("R", "functions", "chronology_helpers.R"))
 source(here("R", "functions", "network_helpers.R"))
 source(here("R", "functions", "route_helpers.R"))
 source(here("R", "functions", "pdi_validation_fixed.R"))
+source(here("R", "functions", "lcp_helpers.R"))

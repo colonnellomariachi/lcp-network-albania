@@ -62,6 +62,10 @@ source(here("R", "09_figures.R"))
 message("\n[10] Discussion checks...")
 source(here("R", "10_discussion_checks.R"))
 
+# 11 — 2×2 factorial: site set × cost function [SLOW first run: new LCPs]
+message("\n[11] Cost-function factorial design...")
+source(here("R", "11_cost_function_factorial.R"))
+
 # Session info for reproducibility
 message("\n[Session info] Writing session_info.txt...")
 sink(here("output", "tables", "session_info.txt"))
