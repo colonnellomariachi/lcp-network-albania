@@ -13,17 +13,11 @@
 #
 # Each cost function keeps its own threshold on both site sets. All other
 # parameters come from 00_setup.R. The two diagonal cells are rebuilt from the
-# saved LCPs with the 04/05 logic and must reproduce the published objects
-# (Step 1, blocking). The new cells reuse the 03 functions (lcp_helpers.R)
-# with the same strategy as their site set: FETE for Hellenistic, manual loop
-# for Roman.
-#
-# DUR103 (Capo Rodon) is snapped one DEM pixel in 03. For loop output (Roman
-# site set) 04 resolves cells with the unsnapped coordinates, so DUR103's
-# paths stay unresolved and it is an isolate in the published R-W network.
-# R-T reproduces that treatment so the two Roman cells stay comparable; the
-# effect of resolving DUR103 is reported separately
-# (factorial_dur103_sensitivity.csv). No published number changes.
+# saved LCPs and must coincide with the objects written by 04/05/04b (Step 1,
+# blocking): this guarantees that the new cells are built exactly like the
+# pipeline networks. The new cells use run_lcp_set() (lcp_helpers.R) with the
+# same output schema as their site set. No site is moved (Task 10): a site on
+# NoData stops the pipeline.
 #
 # Input:  output/rds/{siti,nodes,net,edges}_{hell,rom}*.rds
 #         output/rds/lcp_hell.gpkg, lcp_roman.gpkg
@@ -40,7 +34,6 @@
 #         output/tables/factorial_upland_centres.csv
 #         output/tables/factorial_tests.csv
 #         output/tables/factorial_lcp_consistency.csv
-#         output/tables/factorial_dur103_sensitivity.csv
 #         output/tables/factorial_summary.md
 #         output/images/qc/factorial_betweenness_distributions.png
 #
@@ -118,7 +111,7 @@ lcp_rw <- resolve_lcp_site_ids(st_read(rds_path("lcp_roman.gpkg"), quiet = TRUE)
 cell_ht <- build_cell_network(lcp_ht, nodes_hell, HELL_THRESH)
 cell_rw <- build_cell_network(lcp_rw, nodes_rom,  ROM_THRESH)
 
-# (a) edge tables identical to the published 04 objects
+# (a) edge tables identical to the 04 objects
 edge_key <- function(e) as.data.frame(e[order(e$from, e$to), c("from", "to", "cost_mean", "n_directions")])
 reg_edges <- c(
   ht_all      = isTRUE(all.equal(edge_key(cell_ht$edges),
@@ -141,23 +134,8 @@ same_graph <- function(a, b) {
 reg_graph <- c(ht = same_graph(cell_ht$net, readRDS(rds_path("net_hell.rds"))),
                rw = same_graph(cell_rw$net, readRDS(rds_path("net_rom.rds"))))
 
-# (c) composition vs published values
 comp_ht <- composition_row(cell_ht$net, "H-T")
 comp_rw <- composition_row(cell_rw$net, "R-W")
-reg_comp <- c(
-  ht = comp_ht$n_nodes == 71 && comp_ht$n_edges == 1084 &&
-       round(comp_ht$density, 3) == 0.436 && comp_ht$median_degree == 37 &&
-       comp_ht$n_isolates == 0 && comp_ht$n_components == 2 &&
-       comp_ht$giant_size == 68 && round(comp_ht$giant_pct, 1) == 95.8,
-  # R-W median degree is 7.5 (94 nodes: mean of the 47th and 48th values,
-  # 7 and 8). The Task 9 brief quotes 8; the graph is identical to net_rom.rds
-  # (checks a, b, d), so the difference is rounding in the quoted value.
-  rw = comp_rw$n_nodes == 94 && comp_rw$n_edges == 348 &&
-       round(comp_rw$density, 3) == 0.080 && comp_rw$median_degree == 7.5 &&
-       comp_rw$isolates == "DUR016;DUR029;DUR030;DUR052;DUR053;DUR103" &&
-       comp_rw$n_components == 14 &&
-       comp_rw$giant_size == 66 && round(comp_rw$giant_pct, 1) == 70.2
-)
 
 # (d) per-site centralities vs centrality_comparison.csv
 cc <- read.csv(table_path("centrality_comparison.csv"), stringsAsFactors = FALSE)
@@ -188,16 +166,16 @@ reg_conc <- c(
                         check.attributes = FALSE))
 )
 
-regression <- c(edges = reg_edges, graph = reg_graph, composition = reg_comp,
+regression <- c(edges = reg_edges, graph = reg_graph,
                 centrality = reg_cc, concentration = reg_conc)
 print(regression)
 if (!all(regression)) {
   print(rbind(comp_ht, comp_rw))
-  stop("STEP 1 FAILED — diagonal does not reproduce the published networks: ",
+  stop("STEP 1 FAILED — diagonal does not reproduce the 04/05 networks: ",
        paste(names(regression)[!regression], collapse = ", "),
        ". New cells would not be comparable; stopping.")
 }
-message("Step 1 passed: H-T and R-W reproduce the published networks (",
+message("Step 1 passed: H-T and R-W coincide with the 04/05 objects (",
         length(regression), " checks).")
 
 # ===========================================================================
@@ -218,20 +196,10 @@ if (!file.exists(gpkg_rt))
 raw_hw <- st_read(gpkg_hw, quiet = TRUE)
 raw_rt <- st_read(gpkg_rt, quiet = TRUE)
 
-# Site positions used by the new LCPs must be those of the published runs
-# (same set of origin cells: only DUR103 snapped, to the same pixel).
-origin_cells <- function(x) sort(unique(x$fromCell))
-stopifnot(
-  "H-W origin cells must equal published H-T origin cells" =
-    identical(origin_cells(raw_hw), origin_cells(st_read(rds_path("lcp_hell.gpkg"),  quiet = TRUE))),
-  "R-T origin cells must equal published R-W origin cells" =
-    identical(origin_cells(raw_rt), origin_cells(st_read(rds_path("lcp_roman.gpkg"), quiet = TRUE)))
-)
-
 lcp_hw <- resolve_lcp_site_ids(raw_hw, siti_hell, cs_meta)
 lcp_rt <- resolve_lcp_site_ids(raw_rt, siti_rom,  cs_meta)
-stopifnot("H-W must have 71*70 paths" = nrow(lcp_hw) == 71L * 70L,
-          "R-T must have 94*93 paths" = nrow(lcp_rt) == 94L * 93L)
+stopifnot("H-W must have n*(n-1) paths" = nrow(lcp_hw) == nrow(siti_hell) * (nrow(siti_hell) - 1L),
+          "R-T must have n*(n-1) paths" = nrow(lcp_rt) == nrow(siti_rom)  * (nrow(siti_rom)  - 1L))
 
 cell_hw <- build_cell_network(lcp_hw, nodes_hell, ROM_THRESH)
 cell_rt <- build_cell_network(lcp_rt, nodes_rom,  HELL_THRESH)
@@ -441,26 +409,6 @@ tests$comparison_type[tests$cell_a == "H-T" & tests$cell_b == "R-W"] <- "diagona
 write.csv(tests, table_path("factorial_tests.csv"), row.names = FALSE)
 
 # ---------------------------------------------------------------------------
-# DUR103 sensitivity (Roman cells, loop output)
-# ---------------------------------------------------------------------------
-lcp_rw_fix <- resolve_lcp_site_ids(st_read(rds_path("lcp_roman.gpkg"), quiet = TRUE),
-                                   siti_rom, cs_meta, fix_snapped = TRUE)
-lcp_rt_fix <- resolve_lcp_site_ids(st_read(gpkg_rt, quiet = TRUE),
-                                   siti_rom, cs_meta, fix_snapped = TRUE)
-fix_nets <- list(
-  "R-W" = nets[["R-W"]], "R-W (DUR103 resolved)" = build_cell_network(lcp_rw_fix, nodes_rom, ROM_THRESH)$net,
-  "R-T" = nets[["R-T"]], "R-T (DUR103 resolved)" = build_cell_network(lcp_rt_fix, nodes_rom, HELL_THRESH)$net)
-dur103 <- do.call(rbind, lapply(names(fix_nets), function(k) {
-  g <- fix_nets[[k]]
-  cbind(composition_row(g, k),
-        concentration_row(g, k)[, -1],
-        DUR103_degree = igraph::degree(g)[V(g)$id_sito == "DUR103"],
-        DUR103_neighbours = paste(sort(V(g)$id_sito[igraph::neighbors(g, which(V(g)$id_sito == "DUR103"))]),
-                                  collapse = ";"))
-}))
-write.csv(dur103, table_path("factorial_dur103_sensitivity.csv"), row.names = FALSE)
-
-# ---------------------------------------------------------------------------
 # QC figure — betweenness distributions (rank-size), four panels
 # ---------------------------------------------------------------------------
 qc_df <- cent_long %>%
@@ -583,11 +531,8 @@ md <- c(
   "",
   "## Controllo di regressione (Step 1)",
   "",
-  sprintf("H-T e R-W ricostruite dagli LCP salvati riproducono gli oggetti pubblicati: %d/%d verifiche superate (archi, grafo, composizione, centralità per sito vs `centrality_comparison.csv`, concentrazione vs `betweenness_concentration_sweep.csv`).",
+  sprintf("H-T e R-W ricostruite dagli LCP salvati coincidono con gli oggetti di `04`/`05`: %d/%d verifiche superate (archi, grafo, centralità per sito vs `centrality_comparison.csv`, concentrazione vs `betweenness_concentration_sweep.csv`).",
           sum(regression), length(regression)),
-  "",
-  sprintf("Nota: il grado mediano di R-W è %s (94 nodi; senza isolati: %s), non 8 come indicato nella consegna; il grafo è identico a `net_rom.rds`.",
-          comp_rw$median_degree, comp_rw$median_degree_non_isolates),
   "",
   sprintf("Coerenza degli LCP nuovi (coppie fra i 46 siti dual-phase, costo medio in minuti): %s.",
           paste(sprintf("%s — %d coppie, scarto massimo %.2g min", lcp_consistency$comparison,
@@ -633,15 +578,7 @@ md <- c(
   "",
   "| metrica | confronto | mediane (tutti) | p MW | mediane (dual) | p Wilcoxon | ρ Spearman (dual) |",
   "|---|---|---|---|---|---|---|",
-  q3_tests,
-  "",
-  "## Nota DUR103",
-  "",
-  sprintf("Nelle celle romane (output del loop) DUR103 resta isolato perché `04` risolve le celle con le coordinate non spostate (il sito è spostato di un pixel in `03`). Risolvendolo: R-W grado %s (%s), R-T grado %s (%s). Dettagli in `factorial_dur103_sensitivity.csv`.",
-          dur103$DUR103_degree[dur103$cell == "R-W (DUR103 resolved)"],
-          dur103$DUR103_neighbours[dur103$cell == "R-W (DUR103 resolved)"],
-          dur103$DUR103_degree[dur103$cell == "R-T (DUR103 resolved)"],
-          dur103$DUR103_neighbours[dur103$cell == "R-T (DUR103 resolved)"])
+  q3_tests
 )
 writeLines(md, table_path("factorial_summary.md"), useBytes = TRUE)
 message("Saved factorial_*.csv, factorial_summary.md and qc/factorial_betweenness_distributions.png")

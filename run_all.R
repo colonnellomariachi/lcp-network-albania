@@ -1,7 +1,8 @@
 # =============================================================================
 # run_all.R — Execute the full analysis pipeline in order
 #
-# Expected total runtime: 2–4 hours on a modern desktop (16 GB RAM).
+# Expected total runtime: ~8 hours on a modern desktop (32 GB RAM); the
+# conductance graphs need ~13 GB.
 # Expensive steps are flagged with [SLOW] below.
 #
 # Intermediate objects are written to output/rds/ so you can re-run
@@ -38,6 +39,10 @@ source(here("R", "03_least_cost_paths.R"))
 message("\n[04] Network construction and centrality...")
 source(here("R", "04_networks.R"))
 
+# 04b — Betweenness concentration across thresholds
+message("\n[04b] Betweenness concentration sweep...")
+source(here("R", "04b_betweenness_concentration_sweep.R"))
+
 # 05 — Centrality export
 message("\n[05] Centrality export...")
 source(here("R", "05_centrality.R"))
@@ -66,6 +71,21 @@ source(here("R", "10_discussion_checks.R"))
 message("\n[11] Cost-function factorial design...")
 source(here("R", "11_cost_function_factorial.R"))
 
+# 12 — Hydrographic sensitivity [SLOW first run: 8 penalised LCP sets, ~3.5 h]
+message("\n[12] Hydrographic sensitivity (SLOW)...")
+source(here("R", "12_hydrographic_sensitivity.R"))
+
+# 13 — Size and late-antique horizon sensitivity (induced subgraphs, no LCPs)
+message("\n[13] Size / horizon sensitivity...")
+source(here("R", "13_size_horizon_sensitivity.R"))
+
+# Values that differ from the published ones / regression baselines
+if (length(regression_log)) {
+  message("\n", length(regression_log), " regression difference(s) logged:")
+  for (x in regression_log) message("  - ", x)
+}
+writeLines(regression_log, here("output", "tables", "regression_log.txt"))
+
 # Session info for reproducibility
 message("\n[Session info] Writing session_info.txt...")
 sink(here("output", "tables", "session_info.txt"))
@@ -75,6 +95,5 @@ sink()
 message(rep("=", 60))
 message("Pipeline complete: ", Sys.time())
 message(rep("=", 60))
-message("\nVerification: compare output/tables/centrality_comparison.csv")
-message("against the baseline copy in the project root.")
-message("They must be identical. See README.md §Verification for details.")
+message("\nVerification: differences from the published values / regression")
+message("baselines are listed in output/tables/regression_log.txt.")

@@ -18,6 +18,7 @@
 
 # --- DEM ---------------------------------------------------------------------
 dem <- rast(data_path("dem.tif"))
+set.seed(DEM_ERROR_SEED)   # add_dem_error() uses rnorm(); see 00_setup.R
 dem <- add_dem_error(x = dem, rmse = DEM_RMSE, type = "u")
 
 # --- Cost surfaces -----------------------------------------------------------

@@ -1,44 +1,39 @@
 # =============================================================================
 # 12_hydrographic_sensitivity.R — River-crossing penalty sensitivity
 #
-# Reviewer 1 asks how watercourses affect the networks. No hydrographic layer
-# was kept in the project (the earlier mask was removed and its source is not
-# recoverable); with the author's authorisation an OpenStreetMap snapshot of
-# waterway=river was downloaded (data/hydro/osm_rivers_raw.json; source,
-# query and selection in output/tables/hydro_source.md).
+# Reviewer 1 asks how watercourses affect the networks. The river layer is the
+# author-supplied polygon layer of the main river courses (HYDRO_POLYGON_PATH,
+# data/river polygon.gpkg). It replaces the OSM lines buffered by 25 m used in
+# Task 9 (data/hydro/, no longer read by any script).
 #
 # Rivers are NOT absolute barriers (no data on fords/bridges): the cost of
 # entering a river cell is multiplied by each factor in HYDRO_PENALTIES
 # (×5 moderate, ×20 strong). Implemented by dividing the columns of the
-# conductance matrix (moves INTO river cells) by the factor. Everything else —
-# surfaces, snapping, site sets, thresholds, network construction — is the
-# published pipeline (lcp_helpers.R, network_helpers.R).
+# conductance matrix (moves INTO river cells) by the factor. A DEM cell is a
+# river cell if its centre falls inside a river polygon. Everything else —
+# surfaces, site sets, thresholds, network construction — is the main pipeline
+# (lcp_helpers.R, network_helpers.R). No site is moved.
 #
-# Networks: H-T and R-W (published, priority) and, if listed in HYDRO_CELLS,
-# H-W and R-T (factorial cells from 11). Each is compared with its
-# unpenalised counterpart.
+# Networks: H-T and R-W (priority) and, if listed in HYDRO_CELLS, H-W and R-T
+# (factorial cells from 11). Each is compared with its unpenalised counterpart.
 #
-# Input:  data/hydro/osm_rivers_raw.json, data/dem.tif
+# Input:  data/river polygon.gpkg, data/dem.tif, data/sites.gpkg
 #         output/rds/cost_surface_{hell,rom}.rds, siti_*.rds, nodes_*.rds
 #         output/rds/lcp_hell.gpkg, lcp_roman.gpkg (unpenalised H-T, R-W)
 #         output/rds/lcp_hell_wheeled.gpkg, lcp_rom_tobler.gpkg (from 11)
-# Output: data/hydro/rivers_main.gpkg
-#         output/rds/lcp_hydro_{ht,rw,hw,rt}_x{5,20}.gpkg   [SLOW ~25 min each]
+# Output: output/rds/lcp_hydro_{ht,rw,hw,rt}_x{5,20}.gpkg   [SLOW ~25 min each]
 #         output/rds/net_hydro_{ht,rw,hw,rt}_x{5,20}.rds
 #         output/tables/hydro_sensitivity.csv
 #         output/tables/hydro_upland_centres.csv
+#         output/tables/hydro_sites_in_rivers.csv
 #         output/tables/hydro_source.md
 #         output/images/qc/hydro_rivers_selected.png
 # =============================================================================
 
-HYDRO_CELLS <- c("H-T", "R-W", "H-W", "R-T")   # priority order
+HYDRO_CELLS  <- c("H-T", "R-W", "H-W", "R-T")   # priority order
 UPLAND_IDS_H <- c("DUR032", "DUR053", "DUR015", "DUR025", "DUR003")
 TOP_N_OVERLAP <- 10
-
-hydro_dir <- data_path("hydro")
-osm_json  <- file.path(hydro_dir, "osm_rivers_raw.json")
-if (!file.exists(osm_json))
-  stop("Missing ", osm_json, " — see output/tables/hydro_source.md for the query.")
+HYDRO_TASK9_CELLS <- 42825   # river cells of the Task 9 layer (OSM lines + 25 m)
 
 dir.create(image_path("qc"), showWarnings = FALSE, recursive = TRUE)
 
@@ -57,42 +52,87 @@ cell_spec <- data.frame(
 cell_spec <- cell_spec[match(HYDRO_CELLS, cell_spec$cell), ]
 
 # ---------------------------------------------------------------------------
-# 1. River layer: OSM snapshot → selected main rivers → raster cells
+# 1. River polygons: checks (blocking) → union → raster cells
 # ---------------------------------------------------------------------------
-osm <- jsonlite::fromJSON(osm_json, simplifyVector = FALSE)
-tag <- function(e, k) if (!is.null(e$tags[[k]])) e$tags[[k]] else NA_character_
-rivers_all <- sf::st_sf(
-  osm_id   = vapply(osm$elements, function(e) as.character(e$id), ""),
-  name     = vapply(osm$elements, tag, "", "name"),
-  wikidata = vapply(osm$elements, tag, "", "wikidata"),
-  geometry = sf::st_sfc(lapply(osm$elements, function(e)
-    sf::st_linestring(do.call(rbind, lapply(e$geometry, function(p) c(p$lon, p$lat))))),
-    crs = 4326)) %>%
-  sf::st_transform(CRS_UTM)
+if (!file.exists(HYDRO_POLYGON_PATH))
+  stop("River polygon layer not found: ", HYDRO_POLYGON_PATH)
 
+riv_raw <- sf::st_read(HYDRO_POLYGON_PATH, quiet = TRUE)
+riv_types <- unique(as.character(sf::st_geometry_type(riv_raw)))
+if (!all(riv_types %in% c("POLYGON", "MULTIPOLYGON")))
+  stop("River layer must be POLYGON / MULTIPOLYGON; found: ",
+       paste(riv_types, collapse = ", "))
+
+riv_info <- list(
+  file       = basename(HYDRO_POLYGON_PATH),
+  layer      = sf::st_layers(HYDRO_POLYGON_PATH)$name[1],
+  n          = nrow(riv_raw),
+  types      = paste(riv_types, collapse = ", "),
+  fields     = paste(setdiff(names(riv_raw), attr(riv_raw, "sf_column")), collapse = ", "),
+  epsg_in    = sf::st_crs(riv_raw)$epsg
+)
+riv <- if (isTRUE(riv_info$epsg_in == CRS_UTM)) riv_raw else sf::st_transform(riv_raw, CRS_UTM)
+riv_info$reprojected <- !isTRUE(riv_info$epsg_in == CRS_UTM)
+riv_info$area_km2_in <- sum(as.numeric(sf::st_area(riv))) / 1e6
+
+# Validity (same class of defect that corrupted the PDI): repair, re-check, stop
+invalid <- !sf::st_is_valid(riv)
+invalid[is.na(invalid)] <- TRUE
+riv_info$n_invalid <- sum(invalid)
+if (any(invalid)) {
+  sf::st_geometry(riv)[invalid] <- sf::st_make_valid(sf::st_geometry(riv)[invalid])
+  still <- !sf::st_is_valid(riv); still[is.na(still)] <- TRUE
+  if (any(still))
+    stop(sum(still), " river polygon(s) still invalid after st_make_valid()")
+}
+riv_info$area_km2_valid <- sum(as.numeric(sf::st_area(riv))) / 1e6
+
+# Overlaps: union so no area (and no cell) is counted twice
+ov <- sf::st_overlaps(riv)
+riv_info$n_overlap_pairs <- sum(lengths(ov)) / 2
+riv_union <- sf::st_make_valid(sf::st_union(sf::st_geometry(riv)))
+stopifnot(all(sf::st_is_valid(riv_union)),
+          all(as.character(sf::st_geometry_type(riv_union)) %in% c("POLYGON", "MULTIPOLYGON")))
+riv_info$area_km2_union <- sum(as.numeric(sf::st_area(riv_union))) / 1e6
+
+message(sprintf("River polygons: %d %s, EPSG %s, %.2f km² (union %.2f km²), %d invalid repaired, %d overlapping pairs",
+                riv_info$n, riv_info$types, riv_info$epsg_in, riv_info$area_km2_in,
+                riv_info$area_km2_union, riv_info$n_invalid, riv_info$n_overlap_pairs))
+
+# Rasterise on the DEM grid; cell centre inside a polygon (terra default,
+# no touches = TRUE)
 dem <- terra::rast(data_path("dem.tif"))
-rivers_all <- suppressWarnings(sf::st_intersection(rivers_all, sf::st_as_sfc(sf::st_bbox(dem))))
-rivers_all$length_km <- as.numeric(sf::st_length(rivers_all)) / 1000
-rivers_all$included  <- !is.na(rivers_all$name) & rivers_all$name %in% HYDRO_RIVER_NAMES
-stopifnot("every HYDRO_RIVER_NAMES entry must exist in the snapshot" =
-            all(HYDRO_RIVER_NAMES %in% rivers_all$name))
+river_r <- terra::rasterize(terra::vect(riv_union), dem, field = 1, background = NA)
+stopifnot(terra::compareGeom(river_r, dem))
+river_all   <- which(!is.na(terra::values(river_r, mat = FALSE)))
+river_cells <- river_all[!is.na(terra::values(dem, mat = FALSE)[river_all])]
+cell_km2 <- prod(terra::res(dem)) / 1e6
+riv_info$n_cells        <- length(river_cells)
+riv_info$n_cells_nodata <- length(river_all) - length(river_cells)
+message("River cells: ", length(river_cells), " (", round(length(river_cells) * cell_km2, 1),
+        " km²); Task 9 layer: ", HYDRO_TASK9_CELLS, " (",
+        round(HYDRO_TASK9_CELLS * cell_km2, 1), " km²)")
 
-rivers <- rivers_all[rivers_all$included, ]
-sf::st_write(rivers, file.path(hydro_dir, "rivers_main.gpkg"), delete_dsn = TRUE, quiet = TRUE)
-
-river_r <- terra::rasterize(terra::vect(sf::st_buffer(rivers, HYDRO_BUFFER_M)),
-                            dem, field = 1, touches = TRUE, background = NA)
-river_cells <- which(!is.na(terra::values(river_r, mat = FALSE)) &
-                     !is.na(terra::values(dem, mat = FALSE)))
-message("River cells: ", length(river_cells), " (",
-        round(length(river_cells) * prod(terra::res(dem)) / 1e6, 1), " km²)")
-
-# Sites falling in a river cell (their outgoing moves are not penalised)
-sites_all <- sf::st_read(data_path("sites.gpkg"), quiet = TRUE) %>%
-  sf::st_drop_geometry() %>%
-  dplyr::filter(!is.na(jx), !is.na(Sy)) %>%
-  sf::st_as_sf(coords = c("jx", "Sy"), crs = CRS_UTM)
-site_in_river <- sites_all$id_sito[terra::cellFromXY(dem, sf::st_coordinates(sites_all)) %in% river_cells]
+# Sites inside a river polygon / on a river cell (positions = gpkg geometry).
+# Not a stop criterion: listed because it must be declared in Methods. Moves
+# INTO such a cell are penalised; moves out of it are not.
+sites_all <- sf::st_read(data_path("sites.gpkg"), quiet = TRUE) %>% sf::st_transform(CRS_UTM)
+in_poly <- lengths(sf::st_intersects(sites_all, riv_union)) > 0
+on_cell <- terra::cellFromXY(dem, sf::st_coordinates(sites_all)) %in% river_cells
+hell_ids <- readRDS(rds_path("siti_hell.rds"))$id_sito
+rom_ids  <- readRDS(rds_path("siti_rom.rds"))$id_sito
+sites_in_rivers <- data.frame(
+  id_sito = sites_all$id_sito, localita = sites_all$localita,
+  inside_polygon = in_poly, on_river_cell = on_cell,
+  in_hellenistic_network = sites_all$id_sito %in% hell_ids,
+  in_roman_network       = sites_all$id_sito %in% rom_ids,
+  penalty_on_site_cell = ifelse(on_cell, paste0("x", paste(HYDRO_PENALTIES, collapse = " / x"),
+                                                " on moves into the cell"), "none"),
+  stringsAsFactors = FALSE)[in_poly | on_cell, ]
+rownames(sites_in_rivers) <- NULL
+write.csv(sites_in_rivers, table_path("hydro_sites_in_rivers.csv"), row.names = FALSE)
+message("Sites inside a river polygon or on a river cell: ", nrow(sites_in_rivers),
+        if (nrow(sites_in_rivers)) paste0(" (", paste(sites_in_rivers$id_sito, collapse = ", "), ")") else "")
 
 # ---------------------------------------------------------------------------
 # 2. Penalised LCPs [SLOW]
@@ -131,26 +171,23 @@ siti  <- list(hellenistic = readRDS(rds_path("siti_hell.rds")),
               roman       = readRDS(rds_path("siti_rom.rds")))
 nodes <- list(hellenistic = readRDS(rds_path("nodes_hell.rds")),
               roman       = readRDS(rds_path("nodes_rom.rds")))
-origin_cells <- function(x) sort(unique(x$fromCell))
 
 rows <- list(); upl <- list()
 for (i in seq_len(nrow(cell_spec))) {
   sp <- cell_spec[i, ]
-  base_raw <- sf::st_read(rds_path(sp$base_gpkg), quiet = TRUE)
-  base <- build_cell_network(resolve_lcp_site_ids(base_raw, siti[[sp$site_set]], cs_meta),
-                             nodes[[sp$site_set]], sp$threshold)$net
+  base <- build_cell_network(
+    resolve_lcp_site_ids(sf::st_read(rds_path(sp$base_gpkg), quiet = TRUE),
+                         siti[[sp$site_set]], cs_meta),
+    nodes[[sp$site_set]], sp$threshold)$net
   b0 <- igraph::betweenness(base, normalized = TRUE)
   top0 <- head(V(base)$id_sito[order(-b0, V(base)$id_sito)], TOP_N_OVERLAP)
 
   for (k in c(1, HYDRO_PENALTIES)) {
-    if (k == 1) { g <- base; dur103_same <- TRUE } else {
-      raw <- sf::st_read(hydro_gpkg(sp$tag, k), quiet = TRUE)
-      # Same site positions as the unpenalised run (only DUR103 snapped,
-      # to the same pixel)
-      dur103_same <- identical(origin_cells(raw), origin_cells(base_raw))
-      stopifnot("origin cells must match the unpenalised run" = dur103_same)
-      g <- build_cell_network(resolve_lcp_site_ids(raw, siti[[sp$site_set]], cs_meta),
-                              nodes[[sp$site_set]], sp$threshold)$net
+    if (k == 1) g <- base else {
+      g <- build_cell_network(
+        resolve_lcp_site_ids(sf::st_read(hydro_gpkg(sp$tag, k), quiet = TRUE),
+                             siti[[sp$site_set]], cs_meta),
+        nodes[[sp$site_set]], sp$threshold)$net
       saveRDS(g, rds_path(sprintf("net_hydro_%s_x%d.rds", sp$tag, k)))
     }
     b <- igraph::betweenness(g, normalized = TRUE)
@@ -167,7 +204,6 @@ for (i in seq_len(nrow(cell_spec))) {
         top10 = paste(top, collapse = ";"),
         spearman_betweenness_vs_base =
           suppressWarnings(cor(b0, b_al, method = "spearman")),
-        origin_cells_as_base = dur103_same,
         stringsAsFactors = FALSE))
     ct <- centrality_table(g, sp$cell)
     upl[[length(upl) + 1]] <- data.frame(
@@ -191,61 +227,84 @@ print(hydro[, c("network", "penalty", "n_edges", "n_isolates", "n_components",
 # 4. QC map and source documentation
 # ---------------------------------------------------------------------------
 p_riv <- ggplot() +
-  geom_sf(data = rivers_all[!rivers_all$included, ], colour = "grey75", linewidth = 0.3) +
-  geom_sf(data = rivers, aes(colour = name), linewidth = 0.7) +
+  geom_sf(data = sf::st_sf(geometry = riv_union), fill = "#3B6E8F", colour = "#3B6E8F",
+          linewidth = 0.2) +
   geom_sf(data = sites_all, size = 0.6, colour = "grey20") +
-  labs(title = "QC — OSM rivers: selected (colour) vs excluded (grey)", colour = NULL) +
+  geom_sf(data = sites_all[in_poly | on_cell, ], size = 1.8, shape = 21,
+          colour = "red", fill = NA) +
+  labs(title = "QC — river polygons used for the crossing penalty",
+       subtitle = sprintf("%s: %d polygons, %.1f km²; %d river cells; red = sites inside a polygon / on a river cell (%d)",
+                          riv_info$file, riv_info$n, riv_info$area_km2_union,
+                          riv_info$n_cells, nrow(sites_in_rivers))) +
   theme_minimal(base_size = 8)
 ggsave(image_path("qc", "hydro_rivers_selected.png"), p_riv, width = 8, height = 8, dpi = 150)
 
-inc <- rivers_all %>% sf::st_drop_geometry() %>%
-  dplyr::group_by(name = ifelse(is.na(name), "(senza nome)", name), included) %>%
-  dplyr::summarise(n_ways = dplyr::n(), km = round(sum(length_km), 1),
-                   wikidata = paste(unique(na.omit(wikidata)), collapse = ","),
-                   .groups = "drop") %>%
-  dplyr::arrange(dplyr::desc(included), dplyr::desc(km))
-md_tab <- function(d) c("| nome | way OSM | km nell'area | wikidata |", "|---|---|---|---|",
-                        sprintf("| %s | %d | %.1f | %s |", d$name, d$n_ways, d$km, d$wikidata))
+name_tab <- if ("NAME" %in% names(riv)) {
+  d <- data.frame(name = riv$NAME, km2 = as.numeric(sf::st_area(riv)) / 1e6) %>%
+    dplyr::group_by(name) %>%
+    dplyr::summarise(n = dplyr::n(), km2 = sum(km2), .groups = "drop") %>%
+    dplyr::arrange(dplyr::desc(km2))
+  c("| NAME | poligoni | km² |", "|---|---|---|",
+    sprintf("| %s | %d | %.2f |", d$name, d$n, d$km2))
+} else "Il layer non ha un campo NAME."
+site_tab <- if (nrow(sites_in_rivers)) c(
+  "| sito | località | dentro un poligono | su cella fluviale | rete ellenistica | rete romana | penalità sulla cella |",
+  "|---|---|---|---|---|---|---|",
+  sprintf("| %s | %s | %s | %s | %s | %s | %s |", sites_in_rivers$id_sito,
+          sites_in_rivers$localita,
+          ifelse(sites_in_rivers$inside_polygon, "sì", "no"),
+          ifelse(sites_in_rivers$on_river_cell, "sì", "no"),
+          ifelse(sites_in_rivers$in_hellenistic_network, "sì", "no"),
+          ifelse(sites_in_rivers$in_roman_network, "sì", "no"),
+          ifelse(sites_in_rivers$on_river_cell,
+                 paste0("×", paste(HYDRO_PENALTIES, collapse = " / ×"), " in ingresso"), "nessuna"))
+) else "Nessun sito cade dentro un poligono fluviale o su una cella fluviale."
+
 src <- c(
-  "# Fonte del layer idrografico (Parte 2, Task 9)",
+  "# Fonte del layer idrografico",
   "",
   sprintf("Generato da `R/12_hydrographic_sensitivity.R` il %s.", Sys.Date()),
   "",
-  "## Fonte",
+  "## Layer",
   "",
-  "- **OpenStreetMap**, elementi `waterway=river` (way), © OpenStreetMap contributors, licenza ODbL 1.0.",
-  sprintf("- Snapshot del database OSM: %s; scaricato il 2026-10-03 tramite Overpass API (mirror `overpass.private.coffee`; `overpass-api.de` non disponibile per sovraccarico).", osm$osm3s$timestamp_osm_base),
-  "- Query: `[out:json][timeout:180];way[\"waterway\"=\"river\"](40.80,19.10,41.80,20.50);out geom tags;`",
-  "- File salvato: `data/hydro/osm_rivers_raw.json`; selezione: `data/hydro/rivers_main.gpkg` (EPSG:32634).",
-  "- Il layer usato in passato per la maschera non è presente nel progetto e non è stato recuperato. `waterbodies.gpkg` (fornito dall'autore) contiene solo poligoni di laghi e invasi (molti artificiali, XX secolo), senza linee fluviali, e non è stato usato.",
-  "- Il tracciato è moderno (alvei canalizzati/rettificati, specie nella piana costiera): va dichiarato come approssimazione dei corsi antichi.",
+  sprintf("- File: `data/%s` (layer `%s`), poligoni delle aree dei corsi dei fiumi principali, prodotto dall'autore. Sostituisce le linee OSM con buffer di 25 m del Task 9.",
+          riv_info$file, riv_info$layer),
+  sprintf("- Elementi: %d; geometria: %s; campi: %s.", riv_info$n, riv_info$types, riv_info$fields),
+  sprintf("- CRS: EPSG:%s%s.", riv_info$epsg_in,
+          if (riv_info$reprojected) sprintf(" — riproiettato in EPSG:%d", CRS_UTM) else " (nessuna riproiezione)"),
+  sprintf("- Area totale: %.2f km².", riv_info$area_km2_in),
+  sprintf("- Validità (`sf::st_is_valid`): %d elementi invalidi su %d%s.", riv_info$n_invalid, riv_info$n,
+          if (riv_info$n_invalid > 0) sprintf("; corretti con `st_make_valid()`, area totale %.4f → %.4f km² (%+.4f)",
+                                              riv_info$area_km2_in, riv_info$area_km2_valid,
+                                              riv_info$area_km2_valid - riv_info$area_km2_in) else ""),
+  sprintf("- Sovrapposizioni: %d coppie di poligoni sovrapposti; i poligoni sono uniti (`st_union`) prima della rasterizzazione; area dell'unione %.2f km².",
+          riv_info$n_overlap_pairs, riv_info$area_km2_union),
   "",
-  "## Elementi inclusi",
+  "## Elementi per nome",
   "",
-  "Aste principali di Ishëm, Erzen e Shkumbin e i tre fiumi dalla cui confluenza nasce l'Ishëm (Tërkuzë, Tirana, Zeza). OSM non distingue un rango gerarchico fra i `waterway=river`, quindi la selezione è per nome (`HYDRO_RIVER_NAMES` in `00_setup.R`).",
+  name_tab,
   "",
-  md_tab(inc[inc$included, ]),
+  "## Rasterizzazione e trattamento",
   "",
-  "## Elementi esclusi (presenti nell'estensione del DEM)",
-  "",
-  md_tab(inc[!inc$included, ]),
-  "",
-  "## Trattamento",
-  "",
-  sprintf("- Linee bufferizzate di %d m e rasterizzate sulla griglia del DEM (25 m, `touches = TRUE`): %d celle fluviali (%.1f km²). Fascia ≥ 2 celle, quindi non scavalcabile con un passo a 16 vicini.",
-          HYDRO_BUFFER_M, length(river_cells), length(river_cells) * prod(terra::res(dem)) / 1e6),
+  "- Griglia del DEM (stessa estensione, risoluzione e allineamento). Una cella è fluviale se il suo centro cade dentro un poligono (`terra::rasterize` predefinito, senza `touches = TRUE`).",
+  sprintf("- Celle fluviali: %d (%.1f km²)%s. Task 9 (linee OSM + buffer 25 m, `touches = TRUE`): %d celle (%.1f km²).",
+          riv_info$n_cells, riv_info$n_cells * cell_km2,
+          if (riv_info$n_cells_nodata > 0) sprintf("; altre %d celle dentro i poligoni sono NoData nel DEM e restano non attraversabili", riv_info$n_cells_nodata) else "",
+          HYDRO_TASK9_CELLS, HYDRO_TASK9_CELLS * cell_km2),
   sprintf("- Penalità di attraversamento: costo di ingresso in una cella fluviale × %s (colonne della matrice di conduttanza divise per il fattore). Nessuna barriera assoluta, nessuna cella NoData aggiunta.",
           paste(HYDRO_PENALTIES, collapse = " e ×")),
-  sprintf("- Siti che cadono in una cella fluviale: %s.",
-          if (length(site_in_river)) paste(sort(site_in_river), collapse = ", ") else "nessuno"),
+  "- Nessun sito viene spostato: la pipeline si ferma se un sito cade su NoData.",
   "",
-  "## DUR103 (Capo Rodon)",
+  "## Siti dentro i poligoni fluviali (da dichiarare in Methods)",
   "",
-  sprintf("- La penalità non crea celle NoData, quindi la regola di spostamento è la stessa della pipeline pubblicata: DUR103 cade in una cella NoData (mare, non fiume; distanza dal fiume selezionato più vicino %.0f m) e viene spostato di un pixel (73 m, cella 3143022), come nelle reti senza penalità. Nessun altro sito viene spostato.",
-          min(as.numeric(sf::st_distance(sites_all[sites_all$id_sito == "DUR103", ], rivers)))),
-  sprintf("- Celle di origine degli LCP penalizzati identiche a quelle della corrispondente rete senza penalità in tutti i casi: %s.",
-          if (all(hydro$origin_cells_as_base)) "sì" else "NO"),
-  "- Nelle reti romane (output del loop) DUR103 resta isolato per lo stesso artefatto di `04` documentato in `factorial_dur103_sensitivity.csv`; il confronto con la rete senza penalità è quindi omogeneo."
+  "Posizioni dalla geometria di `data/sites.gpkg`. Per un sito su cella fluviale la penalità si applica ai passi che entrano nella sua cella, non a quelli che ne escono.",
+  "",
+  site_tab,
+  "",
+  "## File non più usati",
+  "",
+  "- `data/hydro/osm_rivers_raw.json`, `data/hydro/rivers_main.gpkg` (Task 9, linee OSM): non letti da nessuno script.",
+  "- `waterbodies.gpkg` nella radice del progetto: non letto da nessuno script."
 )
 writeLines(src, table_path("hydro_source.md"), useBytes = TRUE)
-message("Saved hydro_sensitivity.csv, hydro_upland_centres.csv, hydro_source.md")
+message("Saved hydro_sensitivity.csv, hydro_upland_centres.csv, hydro_sites_in_rivers.csv, hydro_source.md")

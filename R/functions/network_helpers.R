@@ -128,3 +128,18 @@ concentration_row <- function(g, cell) {
     stringsAsFactors = FALSE
   )
 }
+
+#' Induced subgraph on a set of sites, with centralities recomputed
+#'
+#' Edges are defined pair by pair (pairwise travel cost vs a fixed threshold),
+#' so the network restricted to a subset of sites is the induced subgraph of
+#' the full network. Vertex centrality attributes are recomputed on it.
+induced_site_network <- function(g, ids) {
+  sub <- igraph::induced_subgraph(g, which(V(g)$id_sito %in% ids))
+  V(sub)$degree           <- igraph::degree(sub)
+  V(sub)$closeness        <- igraph::closeness(sub)
+  V(sub)$betweenness      <- igraph::betweenness(sub)
+  V(sub)$harmonic         <- igraph::harmonic_centrality(sub, normalized = TRUE)
+  V(sub)$betweenness_norm <- igraph::betweenness(sub, normalized = TRUE)
+  sub
+}

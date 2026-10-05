@@ -86,18 +86,18 @@ site_cells_rom <- data.frame(
   id   = siti_rom$id,
   cell = terra::cellFromXY(cs_rast_rom, sf::st_coordinates(siti_rom))
 )
-# Sanity check: no two sites may share a raster cell
+# No two sites may share a raster cell, and every LCP cell must resolve to a
+# site (an unresolved cell silently dropped DUR103's edges before Task 10).
 if (sum(duplicated(site_cells_rom$cell)) > 0)
-  warning("Duplicate raster cells detected among Roman sites — check snapping")
+  stop("Duplicate raster cells detected among Roman sites")
 
 lcp_rom <- st_read(rds_path("lcp_roman.gpkg")) %>%
   left_join(site_cells_rom, by = c("fromCell" = "cell")) %>% rename(from = id) %>%
   left_join(site_cells_rom, by = c("toCell"   = "cell")) %>% rename(to   = id) %>%
   select(from, to, everything())
 
-# Sanity checks on the join
 if (sum(is.na(lcp_rom$from)) > 0 || sum(is.na(lcp_rom$to)) > 0)
-  warning("NA values in from/to after cell-to-site join")
+  stop("NA values in from/to after cell-to-site join")
 
 lcp_rom$cost_min <- lcp_rom$cost / 60
 hist(lcp_rom$cost_min,

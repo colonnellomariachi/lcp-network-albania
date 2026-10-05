@@ -81,3 +81,23 @@ explain_dual_phase <- function(row, dict, id_col, hell_w, rom_w,
                stringsAsFactors = FALSE)
   } else NULL
 }
+
+#' Chronological dictionary (astronomical years: negative = BC)
+#'
+#' Same values as the dictionaries defined in 01_chronology.R and
+#' 10_discussion_checks.R; used by 13_size_horizon_sensitivity.R.
+CHRONO_DICT <- list(
+  neo_ant  = c(-6500, -5500), neo_med  = c(-5500, -4500),
+  neo_fin  = c(-4500, -3600), eneol    = c(-3600, -2300),
+  bron_gen = c(-2300, -1100), bron_rec = c(-1500, -1100),
+  ott_ac   = c(-800,  -700),  sett_ac  = c(-700,  -600),
+  ses_ac   = c(-600,  -500),  qui_ac   = c(-500,  -400),
+  qua_ac   = c(-400,  -300),  ter_ac   = c(-300,  -200),
+  sec_ac   = c(-200,  -100),  pri_ac   = c(-100,     0),
+  republ   = c(-509,   -27),  imper    = c(-27,    284),
+  roman    = c(-168,   395),  lateant  = c(284,    600),
+  pri_dc   = c(0,    100),    sec_dc   = c(100,    200),
+  ter_dc   = c(200,  300),    qua_dc   = c(300,    400),
+  qui_dc   = c(400,  500),    ses_dc   = c(500,    600),
+  sett_dc  = c(600,  700)
+)

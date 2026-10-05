@@ -1,62 +1,51 @@
-# Fonte del layer idrografico (Parte 2, Task 9)
+# Fonte del layer idrografico
 
-Generato da `R/12_hydrographic_sensitivity.R` il 2026-10-03.
+Generato da `R/12_hydrographic_sensitivity.R` il 2026-10-05.
 
-## Fonte
+## Layer
 
-- **OpenStreetMap**, elementi `waterway=river` (way), © OpenStreetMap contributors, licenza ODbL 1.0.
-- Snapshot del database OSM: 2026-05-31T22:37:44Z; scaricato il 2026-10-03 tramite Overpass API (mirror `overpass.private.coffee`; `overpass-api.de` non disponibile per sovraccarico).
-- Query: `[out:json][timeout:180];way["waterway"="river"](40.80,19.10,41.80,20.50);out geom tags;`
-- File salvato: `data/hydro/osm_rivers_raw.json`; selezione: `data/hydro/rivers_main.gpkg` (EPSG:32634).
-- Il layer usato in passato per la maschera non è presente nel progetto e non è stato recuperato. `waterbodies.gpkg` (fornito dall'autore) contiene solo poligoni di laghi e invasi (molti artificiali, XX secolo), senza linee fluviali, e non è stato usato.
-- Il tracciato è moderno (alvei canalizzati/rettificati, specie nella piana costiera): va dichiarato come approssimazione dei corsi antichi.
+- File: `data/river polygon.gpkg` (layer `waterbodies__water_bodies`), poligoni delle aree dei corsi dei fiumi principali, prodotto dall'autore. Sostituisce le linee OSM con buffer di 25 m del Task 9.
+- Elementi: 24; geometria: MULTIPOLYGON; campi: NAME, TYPE, NATION, CNTRYNAME, RANK, SQKM, Shape_Leng, Shape_Area.
+- CRS: EPSG:32634 (nessuna riproiezione).
+- Area totale: 39.80 km².
+- Validità (`sf::st_is_valid`): 0 elementi invalidi su 24.
+- Sovrapposizioni: 1 coppie di poligoni sovrapposti; i poligoni sono uniti (`st_union`) prima della rasterizzazione; area dell'unione 39.80 km².
 
-## Elementi inclusi
+## Elementi per nome
 
-Aste principali di Ishëm, Erzen e Shkumbin e i tre fiumi dalla cui confluenza nasce l'Ishëm (Tërkuzë, Tirana, Zeza). OSM non distingue un rango gerarchico fra i `waterway=river`, quindi la selezione è per nome (`HYDRO_RIVER_NAMES` in `00_setup.R`).
+| NAME | poligoni | km² |
+|---|---|---|
+| Liqeni i Shkumbinit | 3 | 14.38 |
+| Liqeni i Erzenit | 2 | 8.51 |
+| Liqeni i Tiranës | 1 | 2.36 |
+| Perror i Zhullimës | 1 | 2.32 |
+| Liqeni i Darçit | 1 | 2.08 |
+| Liqeni i Ishmit | 3 | 1.83 |
+| Liqeni i Pezës | 1 | 1.51 |
+| Liqeni i Zezës | 1 | 1.19 |
+| Durrës | 1 | 1.05 |
+| Kavajë | 1 | 1.05 |
+| Laç | 1 | 1.03 |
+| Liqeni i Gjolës | 3 | 0.79 |
+| Liqeni i Tërkuzës | 2 | 0.67 |
+| Perror i Murdharit | 1 | 0.52 |
+| Elbasan | 1 | 0.43 |
+| Tiranë | 1 | 0.07 |
 
-| nome | way OSM | km nell'area | wikidata |
-|---|---|---|---|
-| Shkumbini | 41 | 132.6 | Q736668 |
-| Erzeni | 1 | 52.3 | Q60492 |
-| Lumi Erzenit | 3 | 28.8 |  |
-| Tiranë | 51 | 28.5 |  |
-| Zeza | 8 | 28.0 |  |
-| Lumi i Tërkuzës | 7 | 26.6 | Q116808 |
-| Ishëm | 3 | 18.9 |  |
-| Tërkuzë | 2 | 10.4 |  |
-| Lumi i Tiranës | 14 | 10.1 |  |
+## Rasterizzazione e trattamento
 
-## Elementi esclusi (presenti nell'estensione del DEM)
-
-| nome | way OSM | km nell'area | wikidata |
-|---|---|---|---|
-| (senza nome) | 67 | 304.6 |  |
-| Mat | 14 | 108.1 | Q519866 |
-| Devoll | 20 | 49.9 | Q83839 |
-| Rrapun | 1 | 19.9 |  |
-| Drini i Zi | 3 | 18.4 |  |
-| Lana | 28 | 17.3 |  |
-| Peza | 1 | 16.7 |  |
-| Lumi i Drojës | 3 | 14.1 | Q22012361 |
-| Lumi i Semanit | 1 | 12.7 | Q81632 |
-| Seta | 1 | 9.9 |  |
-| Lumi i Fandit | 1 | 8.6 |  |
-| Fan | 1 | 6.6 |  |
-| Gjole | 7 | 6.6 | Q5566034 |
-| Zaranika | 1 | 5.2 |  |
-| Lumi Drin | 2 | 4.0 |  |
-| Batra | 1 | 3.6 |  |
-| Kanali Tanës | 1 | 1.0 |  |
-
-## Trattamento
-
-- Linee bufferizzate di 25 m e rasterizzate sulla griglia del DEM (25 m, `touches = TRUE`): 42825 celle fluviali (27.0 km²). Fascia ≥ 2 celle, quindi non scavalcabile con un passo a 16 vicini.
+- Griglia del DEM (stessa estensione, risoluzione e allineamento). Una cella è fluviale se il suo centro cade dentro un poligono (`terra::rasterize` predefinito, senza `touches = TRUE`).
+- Celle fluviali: 62870 (39.7 km²); altre 128 celle dentro i poligoni sono NoData nel DEM e restano non attraversabili. Task 9 (linee OSM + buffer 25 m, `touches = TRUE`): 42825 celle (27.0 km²).
 - Penalità di attraversamento: costo di ingresso in una cella fluviale × 5 e ×20 (colonne della matrice di conduttanza divise per il fattore). Nessuna barriera assoluta, nessuna cella NoData aggiunta.
-- Siti che cadono in una cella fluviale: nessuno.
+- Nessun sito viene spostato: la pipeline si ferma se un sito cade su NoData.
 
-## DUR103 (Capo Rodon)
+## Siti dentro i poligoni fluviali (da dichiarare in Methods)
 
-- La penalità non crea celle NoData, quindi la regola di spostamento è la stessa della pipeline pubblicata: DUR103 cade in una cella NoData (mare, non fiume; distanza dal fiume selezionato più vicino 9287 m) e viene spostato di un pixel (73 m, cella 3143022), come nelle reti senza penalità. Nessun altro sito viene spostato.
-- Celle di origine degli LCP penalizzati identiche a quelle della corrispondente rete senza penalità in tutti i casi: sì.
-- Nelle reti romane (output del loop) DUR103 resta isolato per lo stesso artefatto di `04` documentato in `factorial_dur103_sensitivity.csv`; il confronto con la rete senza penalità è quindi omogeneo.
+Posizioni dalla geometria di `data/sites.gpkg`. Per un sito su cella fluviale la penalità si applica ai passi che entrano nella sua cella, non a quelli che ne escono.
+
+Nessun sito cade dentro un poligono fluviale o su una cella fluviale.
+
+## File non più usati
+
+- `data/hydro/osm_rivers_raw.json`, `data/hydro/rivers_main.gpkg` (Task 9, linee OSM): non letti da nessuno script.
+- `waterbodies.gpkg` nella radice del progetto: non letto da nessuno script.

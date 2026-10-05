@@ -38,6 +38,11 @@ MIN_OVERLAP_YEARS <- 25
 
 # --- Cost-surface parameters -------------------------------------------------
 DEM_RMSE   <- 2.9          # vertical RMSE of the DEM (metres)
+# add_dem_error() draws one random error per DEM cell. Until Task 10 no seed
+# was set, so the cost surfaces behind the first submission cannot be
+# regenerated (they are kept in archive/pre_task10_2026-10-05/rds/). From
+# Task 10 the draw is seeded and 02 is reproducible.
+DEM_ERROR_SEED <- 20261005
 NEIGHBOURS <- 16           # raster connectivity for LCP computation
 
 COST_FN_HELL <- "tobler"              # walking / Hellenistic network
@@ -77,15 +82,22 @@ DUR024_Y_FIXED <- 4549673.05871444
 # Rivers are crossing penalties, not barriers: the cost of entering a river
 # cell is multiplied by each factor (moderate / strong sensitivity bounds).
 HYDRO_PENALTIES <- c(5, 20)
-# OSM waterway=river snapshot (data/hydro/osm_rivers_raw.json, see
-# output/tables/hydro_source.md). Main stems Ishëm, Erzen, Shkumbin plus the
-# three rivers whose confluence forms the Ishëm (Tërkuzë, Tirana, Zeza).
-HYDRO_RIVER_NAMES <- c("Ishëm", "Erzeni", "Lumi Erzenit", "Shkumbini",
-                       "Tërkuzë", "Lumi i Tërkuzës", "Tiranë", "Lumi i Tiranës",
-                       "Zeza")
-# Lines are buffered before rasterisation so the river band is >= 2 cells
-# wide and cannot be jumped by a 16-neighbour (knight's) move.
-HYDRO_BUFFER_M <- 25
+# Author-supplied polygons of the main river courses (file name has a space).
+HYDRO_POLYGON_PATH <- here("data", "river polygon.gpkg")
+
+# --- Size / late-antique horizon sensitivity (10 Q7, 13) ---------------------
+ROM_END_ALT    <- 300    # counterfactual end of the Roman window (ROM_END stays 450)
+SUBSAMPLE_N    <- 999    # random 71-site subsets of the Roman networks
+SUBSAMPLE_SEED <- 13
+
+# --- Regression checks -------------------------------------------------------
+# Baseline tables compared by 10_discussion_checks.R.
+REGRESSION_BASELINE_DIR <- here("tests", "discussion_checks_baseline")
+# FALSE: a value that differs from the published/baseline one is logged
+# (regression_log) and the pipeline continues, so a full re-run on new cost
+# surfaces can complete and be reviewed. TRUE: stop at the first difference.
+STRICT_REGRESSION <- FALSE
+regression_log <- character(0)
 
 # --- Figure aesthetics -------------------------------------------------------
 PHASE_COLS   <- c(hellenistic = "#D9A441", roman = "#3B6E8F")
@@ -104,3 +116,19 @@ source(here("R", "functions", "network_helpers.R"))
 source(here("R", "functions", "route_helpers.R"))
 source(here("R", "functions", "pdi_validation_fixed.R"))
 source(here("R", "functions", "lcp_helpers.R"))
+
+#' Like stopifnot() with named conditions, but honours STRICT_REGRESSION.
+#' Use for values that depend on the cost surfaces / networks; keep stopifnot()
+#' for structural invariants.
+check_published <- function(...) {
+  nms <- ...names()
+  for (i in seq_len(...length())) {
+    # ...elt() evaluates lazily, so an error inside a condition is caught too
+    ok <- isTRUE(tryCatch(all(...elt(i)), error = function(e) FALSE))
+    if (ok) next
+    if (STRICT_REGRESSION) stop("Regression: ", nms[i], call. = FALSE)
+    message("  CHANGED  ", nms[i])
+    regression_log <<- c(regression_log, nms[i])
+  }
+  invisible(NULL)
+}

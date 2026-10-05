@@ -203,7 +203,7 @@ if ("def_sito.x" %in% names(q3)) {
 q3$post_146 <- !is.na(q3$earliest_start) & q3$earliest_start > POST146_THRESHOLD
 q3 <- q3[order(-q3$betweenness_norm), ]
 
-stopifnot(
+check_published(
   "Q3 rank-1 must be DUR003"       = q3$id_sito[1] == "DUR003",
   "Q3 rank-2 must be DUR032"       = q3$id_sito[2] == "DUR032",
   "DUR044 must be post_146 = TRUE" = isTRUE(q3$post_146[q3$id_sito == "DUR044"])
@@ -293,7 +293,7 @@ road_check <- station_cc[order(station_cc$id_sito),
                             "degree", "harmonic",
                             "median_mansio", "median_minor_settlement")]
 
-stopifnot(
+check_published(
   "median mansio must equal baseline" =
     abs(median_mansio - 0.000467508181393174) < 1e-12,
   "median minor settlement must equal baseline" =
@@ -326,7 +326,7 @@ st_mod <- st_mod[order(st_mod$id_sito),
                   c("id_sito", "module", "n_members", "def_sito",
                     "comune", "localita", "betweenness_norm", "degree")]
 
-stopifnot(
+check_published(
   "DUR054 must be in module 6"        = st_mod$module[st_mod$id_sito == "DUR054"] == 6L,
   "DUR102 must be in module 3"        = st_mod$module[st_mod$id_sito == "DUR102"] == 3L,
   "DUR054 n_members must be 22"       = st_mod$n_members[st_mod$id_sito == "DUR054"] == 22L,
@@ -380,7 +380,7 @@ station_neighbors <- station_neighbors[
   order(station_neighbors$source, station_neighbors$neighbor), ]
 rownames(station_neighbors) <- NULL
 
-stopifnot(
+check_published(
   "station_neighbors must have 23 rows" = nrow(station_neighbors) == 23L
 )
 message("Station neighbors: ", nrow(station_neighbors), " rows")
@@ -439,7 +439,7 @@ station_roles <- do.call(rbind, roles_list)
 station_roles <- station_roles[order(station_roles$id_sito), ]
 rownames(station_roles) <- NULL
 
-stopifnot(
+check_published(
   "DUR054 role must be 'hub locale'"  =
     station_roles$role[station_roles$id_sito == "DUR054"] == "hub locale",
   "DUR102 role must be 'hub locale'"  =
@@ -533,7 +533,6 @@ if (!file.exists(egnatia_path)) {
 # ROM_END itself is not changed; 300 is used only as a counterfactual.
 # ---------------------------------------------------------------------------
 
-Q7_ALT_ROM_END <- 300
 Q7_FOCUS_IDS   <- c("DUR002", "DUR016", "DUR030", "DUR032", "DUR053")
 
 q7_rows <- lapply(seq_len(nrow(sites_d)), function(ii) {
@@ -543,7 +542,7 @@ q7_rows <- lapply(seq_len(nrow(sites_d)), function(ii) {
   starts <- sapply(active, function(pp) chrono_dict[[pp]][1])
   ends   <- sapply(active, function(pp) chrono_dict[[pp]][2])
   hit_450 <- overlaps_min(starts, ends, ROM_BOUND, ROM_END)
-  hit_300 <- overlaps_min(starts, ends, ROM_BOUND, Q7_ALT_ROM_END)
+  hit_300 <- overlaps_min(starts, ends, ROM_BOUND, ROM_END_ALT)
   data.frame(
     id_sito          = row$id_sito,
     active_periods   = paste(active, collapse = ","),
@@ -610,7 +609,7 @@ message("Saved q7_late_antique_horizon.csv")
 # Regression check
 # ---------------------------------------------------------------------------
 
-baseline_dir <- here::here("tests", "discussion_checks_baseline")
+baseline_dir <- REGRESSION_BASELINE_DIR
 if (!dir.exists(baseline_dir)) {
   message("\nRegression check skipped: baseline directory not found.")
   message("Initialise with:")
@@ -638,12 +637,15 @@ if (!dir.exists(baseline_dir)) {
       new_file <- read.csv(new_path, stringsAsFactors = FALSE)
       result   <- all.equal(baseline, new_file, tolerance = 1e-8)
       if (!isTRUE(result)) {
-        stop(sprintf("Regression mismatch in %s:\n  %s",
-                     fname, paste(result, collapse = "\n  ")))
-      }
-      message("  OK  ", fname)
+        if (STRICT_REGRESSION)
+          stop(sprintf("Regression mismatch in %s: %s",
+                       fname, paste(result, collapse = " | ")))
+        message("  DIFF ", fname, ": ", paste(head(result, 3), collapse = " | "))
+        regression_log <- c(regression_log, paste("baseline:", fname))
+      } else message("  OK  ", fname)
     }
-    message("All regression checks passed.")
+    message("Regression check done: ", length(regression_log),
+            " difference(s) logged in regression_log.")
   }
 }
 

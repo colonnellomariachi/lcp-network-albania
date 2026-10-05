@@ -1,4 +1,328 @@
-# UPDATE — Task 9 (revisione JAMT)
+# UPDATE — Task 10 (run completa, sensibilità a dimensione e orizzonte tardoantico)
+
+Documento aggiornato al 5 ottobre 2026. La sezione del Task 9 è conservata in
+fondo; **i suoi numeri sono superati** da quelli di questa run (vedi §3).
+
+**Stato in una riga.** `run_all.R` è stato eseguito per intero in una sessione
+R nuova (`00`–`13`, figure comprese) senza errori, in 6 h 48 min. Le superfici
+di costo sono state rigenerate con un seed, per tua decisione: di conseguenza
+quasi tutti i numeri del manoscritto cambiano di poco, e alcuni in modo non
+previsto dalla consegna. Per questo **le baseline v2 non sono state scritte**
+e i controlli di regressione puntano ancora alle baseline precedenti: serve la
+tua revisione (§5).
+
+---
+
+## 1. Cosa è stato fatto
+
+### Step 0
+
+| punto | esito |
+|---|---|
+| Commit dello stato del Task 9 | fatto (`99d540b`) prima di qualunque modifica |
+| `ROM_END = 450` | verificato, non modificato |
+| Siti su celle valide del DEM | tutti i 143 siti, **secondo la geometria del gpkg** (quella che usa `01`). Vedi l'avvertenza sotto |
+| Rimozione dello spostamento automatico | fatto: `snap_non_traversable()` eliminata; al suo posto due controlli bloccanti (`assert_sites_on_dem`, `assert_sites_traversable`) in `01`, `03`, `11`, `12`. Rimosse le asserzioni del Task 9 sulla cella 3143022 |
+
+**Avvertenza sulle coordinate.** In `data/sites.gpkg` le colonne attributo
+`jx`/`Sy` non coincidono con la geometria per due siti: DUR103 (68 m; gli
+attributi puntano ancora alla cella NoData) e DUR024 (1182 m; gli attributi
+contengono le coordinate non corrette). La pipeline usa la geometria, quindi
+non c'è effetto sui risultati, ma chiunque legga `jx`/`Sy` ottiene posizioni
+sbagliate. La nuova geometria di DUR103 cade nella stessa cella del DEM su cui
+il codice lo spostava prima.
+
+**Superfici di costo.** `02` aggiungeva al DEM un errore casuale senza seed,
+quindi non era riproducibile. Su tua indicazione: le superfici della prima
+sottomissione sono state spostate in `archive/pre_task10_2026-10-05/rds/`
+(insieme a LCP, reti, tabelle e figure precedenti, 4,1 GB) e `02` ora usa
+`DEM_ERROR_SEED = 20261005`.
+
+**Motore LCP.** `03` usa il motore veloce (`compute_lcps_graph`), come hai
+scelto: circa 25 min per rete.
+
+### Step 0bis — layer idrografico
+
+`data/river polygon.gpkg` (il nome ha **un** solo spazio, non due).
+
+| controllo | esito |
+|---|---|
+| leggibile, tipo | 24 elementi MULTIPOLYGON, layer `waterbodies__water_bodies` |
+| campi | NAME, TYPE, NATION, CNTRYNAME, RANK, SQKM, Shape_Leng, Shape_Area |
+| CRS | EPSG:32634, nessuna riproiezione |
+| validità | 24 su 24 validi, nessuna correzione |
+| sovrapposizioni | 1 coppia; poligoni uniti prima della rasterizzazione |
+| area | 39,80 km² |
+| celle fluviali (centro nel poligono) | 62.870 (39,7 km²), contro 42.825 (27 km²) del Task 9; altre 128 celle interne ai poligoni sono NoData |
+| siti dentro i poligoni | **nessuno** |
+
+**Correzione rispetto al Task 9.** Avevo scritto che `waterbodies.gpkg`
+conteneva solo laghi e invasi. Era sbagliato: i poligoni "Liqeni i Shkumbinit /
+Erzenit / Ishmit…" sono alvei fluviali (per esempio 9,8 km² con 184 km di
+perimetro) e il nuovo layer ne è un sottoinsieme. Li avevo giudicati dal nome.
+
+`12` non legge più i dati OSM. **File ora inutilizzati**, non cancellati:
+`data/hydro/osm_rivers_raw.json`, `data/hydro/rivers_main.gpkg`,
+`waterbodies.gpkg` (radice del progetto).
+
+### Step 1 — run completa
+
+Lanciata con `Rscript run_all.R` dalla radice, 15:13 → 22:01. Aggiunti a
+`run_all.R`: `04b` (mancava, ma produce `betweenness_concentration_sweep.csv`),
+`12`, `13`, e la scrittura di `output/tables/regression_log.txt`.
+
+Perché la run potesse arrivare in fondo con superfici nuove, i controlli sui
+valori pubblicati non sono più bloccanti: le differenze vengono registrate
+(`STRICT_REGRESSION <- FALSE` in `00_setup.R`). Restano bloccanti i controlli
+strutturali e cronologici.
+
+Rapporto di confronto: `output/tables/rerun_diff_report.md`, generato da
+`tests/rerun_diff_report.R` (2033 valori, 692 variati).
+
+### Step 2 — `R/13_size_horizon_sensitivity.R`
+
+Scritto, aggiunto a `run_all.R`, eseguito nella run completa. Nessun LCP
+ricalcolato.
+
+### Step 3 — chiusura
+
+- Baseline v2: **non scritte** (valori inattesi nel rapporto, come da consegna).
+- Commit finale: fatto sul branch `lcp_1`.
+
+---
+
+## 2. Rapporto di confronto: cosa è cambiato
+
+Due cause distinte.
+
+1. **DUR103** recupera i suoi archi (atteso).
+2. **Superfici rigenerate**: i costi a coppie cambiano in mediana dello 0,14 %
+   (Tobler) e dello 0,26 % (ruota), ma alcune coppie vicine alla soglia cambiano
+   stato. Su singole coppie la variazione arriva al 34 % (Tobler) e al 69 %
+   (ruota).
+
+### Cambiamenti attesi dalla consegna
+
+| rete | quantità | atteso | nuovo | conforme |
+|---|---|---|---|---|
+| R-W | archi | 350 | **355** | no |
+| R-W | isolati | 5 | 5 | sì |
+| R-W | componenti | 13 | 13 | sì |
+| R-W | componente gigante | 66 (70,2 %) | 66 (70,2 %) | sì |
+| R-T | archi | 1554 | **1553** | no |
+| R-T | isolati | 0 | 0 | sì |
+| R-T | componenti | 1 | 1 | sì |
+
+- **H-T non è identica**: 1085 archi invece di 1084 (arco in più DUR061–DUR098,
+  a 0,03 % dalla soglia). La causa sono le superfici, non la coordinata di
+  DUR103, che cade nella stessa cella di prima.
+- **R-W**: oltre ai 2 archi di DUR103, 5 archi in più dovuti alle superfici
+  (DUR043–DUR046, DUR061–DUR112, DUR076–DUR079, DUR076–DUR114, DUR079–DUR114),
+  tutti entro il 2,9 % dalla soglia. Nessun arco perso.
+- **La componente gigante di R-W ha gli stessi 66 nodi ma 335 archi invece di
+  330**, quindi community detection e null model non restano invariati.
+
+### Valori inattesi che contano per il testo
+
+| quantità | precedente | nuovo |
+|---|---|---|
+| R-W grado mediano (tutti i nodi) | 7,5 | 8 |
+| R-W quota del 1° nodo | 0,092 | 0,080 |
+| R-W rapporto 1°/2° | 1,32 | 1,11 |
+| R-W Freeman | 0,105 | 0,088 |
+| R-W secondo nodo per betweenness | DUR002 | DUR046 (DUR002 terzo) |
+| Modularità (6 moduli, stesse dimensioni 22/15/11/7/6/5) | 0,605 | 0,600 |
+| Null model spaziale: p | 0,087 | **0,185** (iterazioni valide 975 → 868) |
+| Null model a gradi conservati: p | 0 | 0 |
+| Betweenness dual-phase, Spearman ρ | 0,360 (p = 0,014) | 0,385 (p = 0,008) |
+| Kruskal-Wallis betweenness ~ tipologia, romano (4 categorie) | p = 0,021 | p = 0,013 |
+| PDI segmento 2, ruota / Tobler | 5,14 / 5,94 | **6,23 / 5,69** (ordine invertito) |
+| PDI segmento 3, Tobler / linea retta | 2,99 / 2,69 | **2,66 / 2,69** (Tobler ora primo) |
+
+Non cambiano: numero di siti per fase (71, 94, 46 dual), composizione di H-T a
+parte l'arco in più, nodo di testa di entrambe le reti (DUR003, DUR050), primi
+dieci nodi ellenistici e loro dispersione, isolati di R-W, numero e dimensione
+dei moduli, l'esito dei test su grado e harmonic, il PDI del percorso completo
+(ordine invariato), Q1, Q4, Q5, Q6, ruoli e vicini delle stazioni.
+
+**Due avvertenze sul rapporto.**
+
+- `community_by_sitetype.csv` risulta variato al 100 %, ma è solo un cambio di
+  etichette di colonna (italiano → inglese): il file precedente era stato
+  prodotto con una versione più vecchia di `tipo_sito`. I conteggi sono
+  identici.
+- Il test di Kruskal-Wallis per `def_sito` ha 12 categorie nella rete romana,
+  non 14. Va controllato da dove viene il 14 del testo.
+
+### Sensibilità idrografica: layer OSM vs layer poligonale
+
+Con il layer poligonale l'effetto resta piccolo. Isolati, componenti e
+percentuale della gigante non cambiano in nessuna rete. Nel confronto pesa
+anche il cambio delle superfici, non solo quello del layer.
+
+| rete | penalità | archi (OSM → poligoni) | quota 1° nodo | Freeman | primi dieci in comune | ρ betweenness |
+|---|---|---|---|---|---|---|
+| H-T | ×5 | 1083 → 1083 | 0,191 → 0,190 | 0,121 → 0,121 | 9 → 9 | 0,996 → 0,995 |
+| H-T | ×20 | 1079 → 1078 | 0,184 → 0,190 | 0,120 → 0,121 | 8 → 8 | 0,970 → 0,993 |
+| R-W | ×5 | 347 → 351 | 0,095 → 0,095 | 0,109 → 0,109 | 10 → 9 | 0,995 → 0,986 |
+| R-W | ×20 | 343 → 345 | 0,096 → 0,095 | 0,113 → 0,112 | 9 → 8 | 0,988 → 0,962 |
+| H-W | ×5 | 434 → 433 | 0,293 → 0,349 | 0,117 → 0,150 | 10 → 10 | 1,000 → 0,999 |
+| H-W | ×20 | 432 → 432 | 0,334 → 0,334 | 0,147 → 0,147 | 9 → 9 | 0,954 → 0,954 |
+| R-T | ×5 | 1548 → 1539 | 0,041 → 0,041 | 0,032 → 0,033 | 8 → 9 | 0,997 → 0,987 |
+| R-T | ×20 | 1531 → 1526 | 0,041 → 0,040 | 0,032 → 0,033 | 8 → 9 | 0,971 → 0,978 |
+
+Le reti senza penalità sono quelle nuove (R-W 355 archi, R-T 1553). Con i
+poligoni Dorez resta al rank 2 di H-T anche a ×20; con le linee OSM scendeva
+al 15. In R-T il nodo di testa passa a DUR027 con entrambe le penalità.
+
+---
+
+## 3. Numeri aggiornati del disegno 2×2 (sostituiscono quelli del Task 9)
+
+| cella | archi | isolati | componenti | gigante | quota 1° nodo | Gini | Freeman | nodo di testa |
+|---|---|---|---|---|---|---|---|---|
+| H-T | 1085 | 0 | 2 | 68 (95,8 %) | 0,191 | 0,676 | 0,121 | DUR003 |
+| R-T | 1553 | 0 | 1 | 94 (100 %) | 0,043 | 0,511 | 0,036 | DUR138 |
+| H-W | 434 | 7 | 13 | 41 (57,7 %) | 0,293 | 0,917 | 0,117 | DUR033 |
+| R-W | 355 | 5 | 13 | 66 (70,2 %) | 0,080 | 0,743 | 0,088 | DUR050 |
+
+Le tre risposte del Task 9 non cambiano: la concentrazione cala in entrambi i
+confronti a funzione costante; con Tobler perdono rank 2 centri d'altura su 4;
+con la ruota 3 su 4 sono a betweenness 0 in entrambe le celle. Dettagli in
+`output/tables/factorial_summary.md`.
+
+---
+
+## 4. Risultati dello Step 2 (`sens_summary.md`)
+
+**Verifica preliminare: superata.** Gli archi non dipendono dall'insieme dei
+siti: media delle due direzioni per coppia, soglia assoluta. Controllo empirico
+sulle 1035 coppie fra i 46 siti dual-phase: costi identici e stesso sottografo
+indotto, per entrambe le funzioni.
+
+### 2a — rete romana con ROM_END = 300
+
+72 siti (94 − 22), di cui 43 dual-phase con la rete ellenistica.
+
+| rete | nodi | archi | isolati | componenti | gigante |
+|---|---|---|---|---|---|
+| R300-T | 72 | 881 | 0 | 1 | 72 (100 %) |
+| R300-W | 72 | 209 | 3 | 11 | 47 (65,3 %) |
+
+**Domanda 1 — la concentrazione resta più bassa nella rete romana ristretta a
+ROM_END = 300? Sì**, su tutte e tre le misure e con entrambe le funzioni.
+
+| misura | H-T | R300-T | R-T | H-W | R300-W | R-W |
+|---|---|---|---|---|---|---|
+| quota 1° nodo | 0,191 | 0,057 | 0,043 | 0,293 | 0,110 | 0,080 |
+| Gini | 0,676 | 0,516 | 0,511 | 0,917 | 0,754 | 0,743 |
+| Freeman | 0,121 | 0,052 | 0,036 | 0,117 | 0,101 | 0,088 |
+
+Nodo di testa: R300-T DUR027, R300-W DUR046.
+
+Centri d'altura (rank di betweenness / n): Dorez è 2/71 in H-T, 15/72 in
+R300-T e 4/94 in R-T, con betweenness quasi uguale nei tre casi (0,030 / 0,031
+/ 0,035). Mliku è 38/71, 12/72 e 41/94. Nelle reti su ruota tutti e quattro
+restano a betweenness 0 o quasi.
+
+### 2b — sottocampionamento a 71 siti
+
+999 sottoinsiemi casuali di 71 siti, seed 13, gli stessi per le due funzioni.
+
+| rete | misura | mediana sottocampioni | 2,5 % – 97,5 % | valore ellenistico | percentile | fuori |
+|---|---|---|---|---|---|---|
+| R-T | quota 1° nodo | 0,066 | 0,047 – 0,113 | 0,191 | 100,0 | sì |
+| R-T | Gini | 0,527 | 0,474 – 0,595 | 0,676 | 100,0 | sì |
+| R-T | Freeman | 0,061 | 0,035 – 0,120 | 0,121 | 98,3 | sì |
+| R-T | betweenness mediana | 0,0112 | 0,0070 – 0,0148 | 0,0037 | 0,0 | sì |
+| R-W | quota 1° nodo | 0,122 | 0,083 – 0,189 | 0,293 | 100,0 | sì |
+| R-W | Gini | 0,757 | 0,703 – 0,827 | 0,917 | 100,0 | sì |
+| R-W | Freeman | 0,126 | 0,064 – 0,226 | 0,117 | 41,0 | **no** |
+| R-W | betweenness mediana | 0,0022 | 0,0002 – 0,0066 | 0,0001 | 1,9 | sì |
+
+**Domanda 2 — il valore ellenistico cade fuori dall'intervallo per ciascuna
+misura e funzione? Parzialmente: 7 su 8.** Fa eccezione la centralizzazione di
+Freeman con il trasporto su ruota, dove il valore ellenistico (0,117) è al 41°
+percentile. Con Tobler la Freeman è fuori di poco (0,1206 contro un limite
+superiore di 0,1196).
+
+Per R300-T e R300-W l'esito è lo stesso (7 su 8, stessa eccezione), ma con 72
+siti i sottoinsiemi di 71 sono solo 72 distinti: quell'intervallo misura
+l'effetto di togliere un sito, non la dimensione.
+
+---
+
+## 5. Cosa rimane da fare
+
+### Decisioni tue
+
+1. **Accettare o no la nuova run come riferimento.** Se sì, i numeri del
+   manoscritto vanno aggiornati con quelli di `output/` e posso scrivere
+   `tests/baseline_v2/`, ripuntare `REGRESSION_BASELINE_DIR` e riportare
+   `STRICT_REGRESSION` a `TRUE`. Se no, le superfici precedenti sono in
+   archivio e si possono rimettere al loro posto.
+2. **Null model spaziale.** p passa da 0,087 a 0,185 con 5 archi in più nella
+   gigante. Il risultato era già sopra 0,05, ma la sua instabilità va
+   considerata nel testo.
+3. **Via Egnatia.** Nei segmenti 2 e 3 l'ordine fra le funzioni cambia con la
+   nuova estrazione dell'errore del DEM. Le conclusioni per segmento dipendono
+   quindi dal seed; quelle sul percorso completo no.
+4. **Coordinate attributo.** Allineare `jx`/`Sy` alla geometria per DUR103 e
+   DUR024 in `sites.gpkg`, oppure eliminare le due colonne.
+5. **Kruskal-Wallis a 14 categorie** e **grado mediano di R-W** (ora 8 su
+   tutti i nodi): verificare cosa riporta il testo.
+6. **File inutilizzati**: `data/hydro/` e `waterbodies.gpkg`.
+7. **Interpretazione** dei risultati di §3 e §4: per consegna solo numeri.
+
+### Lavoro tecnico
+
+8. Baseline v2 e ripuntamento dei controlli, dopo la tua decisione al punto 1.
+9. `README.md` descrive ancora la verifica contro una copia di
+   `centrality_comparison.csv` nella radice: va aggiornato.
+10. Archiviazione su Zenodo: le superfici nuove, `river polygon.gpkg` e, se
+    serve a documentare la prima sottomissione, il contenuto di
+    `archive/pre_task10_2026-10-05/`.
+11. Git: la cartella `.git/objects/98` ha un blocco di scrittura anomalo
+    (probabilmente Dropbox). I commit sono riusciti scrivendo a mano gli
+    oggetti destinati a quella cartella; conviene verificare il repository con
+    `git fsck` e, se possibile, tenerlo fuori da Dropbox.
+
+---
+
+## 6. File nuovi e modificati (Task 10)
+
+| file | stato | contenuto |
+|---|---|---|
+| `R/13_size_horizon_sensitivity.R` | nuovo | Step 2 |
+| `tests/rerun_diff_report.R` | nuovo | rapporto di confronto fra due run |
+| `R/00_setup.R` | modificato | `DEM_ERROR_SEED`, `HYDRO_POLYGON_PATH`, `ROM_END_ALT`, `SUBSAMPLE_N`, `SUBSAMPLE_SEED`, `REGRESSION_BASELINE_DIR`, `STRICT_REGRESSION`, `check_published()`; rimosse `HYDRO_RIVER_NAMES`, `HYDRO_BUFFER_M` |
+| `R/01_chronology.R` | modificato | controllo bloccante dei siti sul DEM |
+| `R/02_cost_surfaces.R` | modificato | seed |
+| `R/03_least_cost_paths.R` | riscritto | motore veloce, nessuno spostamento |
+| `R/04_networks.r` | modificato | celle non risolte o duplicate: da avviso a errore |
+| `R/10_discussion_checks.R` | modificato | asserzioni dipendenti dalle reti non bloccanti; Q7 usa `ROM_END_ALT` |
+| `R/11_cost_function_factorial.R` | modificato | tolte asserzioni sullo spostamento, valori pubblicati cablati e sensibilità DUR103 |
+| `R/12_hydrographic_sensitivity.R` | riscritto | layer poligonale |
+| `R/functions/lcp_helpers.R` | riscritto | controlli bloccanti al posto dello spostamento |
+| `R/functions/network_helpers.R` | modificato | `induced_site_network()` |
+| `R/functions/chronology_helpers.R` | modificato | `CHRONO_DICT` |
+| `run_all.R` | modificato | `04b`, `12`, `13`, log di regressione |
+
+Output nuovi in `output/tables/`: `rerun_diff_report.md`, `regression_log.txt`,
+`sens_rom300_{composition,concentration,tests,upland_centres}.csv`,
+`sens_subsample_distributions.csv`, `sens_summary.md`,
+`hydro_sites_in_rivers.csv`. Non più prodotto:
+`factorial_dur103_sensitivity.csv`.
+
+---
+---
+
+# Task 9 (revisione JAMT) — sezione storica
+
+> I numeri di questa sezione si riferiscono alle superfici di costo della prima
+> sottomissione (ora in archivio) e sono superati dalla run del Task 10. Due
+> affermazioni sono state corrette: `waterbodies.gpkg` contiene alvei fluviali
+> (§3.3), e `run_all.R` è stato ora eseguito per intero (§4, punto 7).
 
 Disegno fattoriale 2×2, sensibilità idrografica, orizzonte tardoantico.
 Lavoro svolto fra il 2 e il 3 ottobre 2026; documento aggiornato al 5 ottobre 2026.

@@ -20,6 +20,11 @@
 # The gpkg already carries the corrected DUR024 (Ad Quintum) coordinates.
 siti_raw <- st_read(data_path("sites.gpkg"))
 
+# Blocking check: site positions come from the gpkg geometry (the jx / Sy
+# attribute columns are NOT used). Every site must sit on a valid DEM cell;
+# nothing is moved by the code.
+assert_sites_on_dem(siti_raw, rast(data_path("dem.tif")), "sites.gpkg")
+
 # --- Chronological dictionary (astronomical years: negative = BC) ------------
 chrono_dict <- list(
   neo_ant  = c(-6500, -5500), neo_med  = c(-5500, -4500),
