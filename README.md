@@ -186,7 +186,7 @@ computing and comparing their areas. `08` reports both values
 (`egnatia_pdi_comparison_bug.csv`); the corrected ones are in
 `egnatia_pdi_final.csv`.
 
-See Supplementary Material S1 and [LEASTCOSTPATH ISSUE URL].
+
 
 ---
 
@@ -207,5 +207,4 @@ See Supplementary Material S1 and [LEASTCOSTPATH ISSUE URL].
 
 If you use this code or its results, please cite:
 
-- [ARTICLE CITATION]
-- Code and data: [ZENODO CONCEPT DOI]
+- Code and data: [[ZENODO ]](https://doi.org/10.5281/zenodo.21677211)
