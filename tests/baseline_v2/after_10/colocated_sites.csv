@@ -1,0 +1,9 @@
+"id_a","id_b","distance_m","toponym_a","toponym_b","def_sito_a","def_sito_b","both_roman"
+"DUR133","DUR134",105.951716027613,"Spanjo Qenze","Spanjo Qenze","farmstead","farmstead",TRUE
+"DUR131","DUR133",125.19469317606,"Spanjo Qenze","Spanjo Qenze","farmstead","farmstead",TRUE
+"DUR132","DUR131",144.073165418784,"Spanjo Qenze","Spanjo Qenze","farmstead","farmstead",TRUE
+"DUR009","DUR103",197.449347270785,"Capo Rodoni","Capo Rodoni","fortified centre","generic settlement",FALSE
+"DUR132","DUR133",205.818807740737,"Spanjo Qenze","Spanjo Qenze","farmstead","farmstead",TRUE
+"DUR047","DUR134",216.701289807695,"Spanjo Qenze","Spanjo Qenze","generic settlement","farmstead",TRUE
+"DUR087","DUR088",217.341663950121,"DUR087","DUR088","farmstead","farmstead",FALSE
+"DUR131","DUR134",221.386807498218,"Spanjo Qenze","Spanjo Qenze","farmstead","farmstead",TRUE

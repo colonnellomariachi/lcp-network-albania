@@ -5,7 +5,7 @@
 #
 # No site is ever moved by the code. Site coordinates are managed by the
 # author in data/sites.gpkg; a site on a NoData DEM cell, outside the DEM, or
-# on a non-traversable cost-surface cell stops the pipeline (Task 10).
+# on a non-traversable cost-surface cell stops the pipeline.
 # =============================================================================
 
 #' Blocking check: every site must fall on a valid DEM cell
@@ -98,7 +98,7 @@ compute_lcps_loop <- function(cost_surface, sites, label = "") {
 #' Output columns match create_lcp() (geometry, costFunction, fromCell,
 #' toCell, cost) plus origin_ID / destination_ID when schema = "fete", with
 #' the same row filters as create_FETE_lcps(). Verified identical to
-#' create_lcp() (costs, geometries, cells) in Task 9.
+#' create_lcp() (costs, geometries, cells).
 compute_lcps_graph <- function(cost_surface, sites, schema = c("fete", "loop"),
                                label = "") {
   schema <- match.arg(schema)
@@ -167,7 +167,7 @@ run_lcp_set <- function(sites, cs_file, strategy = c("fete", "loop"),
   invisible(lcp)
 }
 
-#' Resolve raw LCPs to integer site IDs (04_networks.r logic)
+#' Resolve raw LCPs to integer site IDs (04_networks.R logic)
 #'
 #' FETE-schema output carries origin_ID / destination_ID (row indices of the
 #' site table). Loop-schema output carries fromCell / toCell only; these are

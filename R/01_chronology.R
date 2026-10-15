@@ -8,8 +8,8 @@
 # periods overlaps the target window by > MIN_OVERLAP_YEARS (25 years).
 # No weighting; binary inclusion only.
 #
-# Input:  data/sites.gpkg   (143 sites, already contains corrected DUR024
-#                             coordinates — see REFACTOR_NOTES.md §2)
+# Input:  data/sites.gpkg   (143 sites, already contains the corrected DUR024
+#                             coordinates; see DUR024_X_FIXED in 00_setup.R)
 # Output: output/rds/siti_hell.rds
 #         output/rds/siti_rom.rds
 # =============================================================================
@@ -24,6 +24,18 @@ siti_raw <- st_read(data_path("sites.gpkg"))
 # attribute columns are NOT used). Every site must sit on a valid DEM cell;
 # nothing is moved by the code.
 assert_sites_on_dem(siti_raw, rast(data_path("dem.tif")), "sites.gpkg")
+
+# Blocking check: the jx / Sy attribute columns must agree with the geometry
+# (within 1 m), so nobody reading the attributes gets a different position.
+local({
+  g <- st_coordinates(st_transform(siti_raw, CRS_UTM))
+  d <- sqrt((siti_raw$jx - g[, 1])^2 + (siti_raw$Sy - g[, 2])^2)
+  bad <- is.na(d) | d > 1
+  if (any(bad))
+    stop("sites.gpkg: jx/Sy differ from the geometry by more than 1 m for ",
+         paste(sprintf("%s (%.1f m)", siti_raw$id_sito[bad], d[bad]), collapse = ", "),
+         call. = FALSE)
+})
 
 # --- Chronological dictionary (astronomical years: negative = BC) ------------
 chrono_dict <- list(

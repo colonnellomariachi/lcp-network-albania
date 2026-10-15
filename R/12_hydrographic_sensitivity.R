@@ -3,8 +3,8 @@
 #
 # Reviewer 1 asks how watercourses affect the networks. The river layer is the
 # author-supplied polygon layer of the main river courses (HYDRO_POLYGON_PATH,
-# data/river polygon.gpkg). It replaces the OSM lines buffered by 25 m used in
-# Task 9 (data/hydro/, no longer read by any script).
+# data/river polygon.gpkg). It replaces an earlier layer of OSM river lines
+# buffered by 25 m, which is no longer read.
 #
 # Rivers are NOT absolute barriers (no data on fords/bridges): the cost of
 # entering a river cell is multiplied by each factor in HYDRO_PENALTIES
@@ -33,7 +33,7 @@
 HYDRO_CELLS  <- c("H-T", "R-W", "H-W", "R-T")   # priority order
 UPLAND_IDS_H <- c("DUR032", "DUR053", "DUR015", "DUR025", "DUR003")
 TOP_N_OVERLAP <- 10
-HYDRO_TASK9_CELLS <- 42825   # river cells of the Task 9 layer (OSM lines + 25 m)
+HYDRO_TASK9_CELLS <- 42825   # river cells of the earlier OSM layer (lines + 25 m)
 
 dir.create(image_path("qc"), showWarnings = FALSE, recursive = TRUE)
 
@@ -110,7 +110,7 @@ cell_km2 <- prod(terra::res(dem)) / 1e6
 riv_info$n_cells        <- length(river_cells)
 riv_info$n_cells_nodata <- length(river_all) - length(river_cells)
 message("River cells: ", length(river_cells), " (", round(length(river_cells) * cell_km2, 1),
-        " km²); Task 9 layer: ", HYDRO_TASK9_CELLS, " (",
+        " km²); earlier OSM layer: ", HYDRO_TASK9_CELLS, " (",
         round(HYDRO_TASK9_CELLS * cell_km2, 1), " km²)")
 
 # Sites inside a river polygon / on a river cell (positions = gpkg geometry).
@@ -267,7 +267,7 @@ src <- c(
   "",
   "## Layer",
   "",
-  sprintf("- File: `data/%s` (layer `%s`), poligoni delle aree dei corsi dei fiumi principali, prodotto dall'autore. Sostituisce le linee OSM con buffer di 25 m del Task 9.",
+  sprintf("- File: `data/%s` (layer `%s`), poligoni delle aree dei corsi dei fiumi principali, prodotto dall'autore. Sostituisce un layer precedente di linee OSM con buffer di 25 m.",
           riv_info$file, riv_info$layer),
   sprintf("- Elementi: %d; geometria: %s; campi: %s.", riv_info$n, riv_info$types, riv_info$fields),
   sprintf("- CRS: EPSG:%s%s.", riv_info$epsg_in,
@@ -287,7 +287,7 @@ src <- c(
   "## Rasterizzazione e trattamento",
   "",
   "- Griglia del DEM (stessa estensione, risoluzione e allineamento). Una cella è fluviale se il suo centro cade dentro un poligono (`terra::rasterize` predefinito, senza `touches = TRUE`).",
-  sprintf("- Celle fluviali: %d (%.1f km²)%s. Task 9 (linee OSM + buffer 25 m, `touches = TRUE`): %d celle (%.1f km²).",
+  sprintf("- Celle fluviali: %d (%.1f km²)%s. Layer OSM precedente (linee + buffer 25 m, `touches = TRUE`): %d celle (%.1f km²).",
           riv_info$n_cells, riv_info$n_cells * cell_km2,
           if (riv_info$n_cells_nodata > 0) sprintf("; altre %d celle dentro i poligoni sono NoData nel DEM e restano non attraversabili", riv_info$n_cells_nodata) else "",
           HYDRO_TASK9_CELLS, HYDRO_TASK9_CELLS * cell_km2),
@@ -303,8 +303,7 @@ src <- c(
   "",
   "## File non più usati",
   "",
-  "- `data/hydro/osm_rivers_raw.json`, `data/hydro/rivers_main.gpkg` (Task 9, linee OSM): non letti da nessuno script.",
-  "- `waterbodies.gpkg` nella radice del progetto: non letto da nessuno script."
+  "- Il layer OSM precedente (linee dei fiumi) non è più letto da nessuno script."
 )
 writeLines(src, table_path("hydro_source.md"), useBytes = TRUE)
 message("Saved hydro_sensitivity.csv, hydro_upland_centres.csv, hydro_sites_in_rivers.csv, hydro_source.md")

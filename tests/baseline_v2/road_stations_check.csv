@@ -1,0 +1,6 @@
+"id_sito","comune","localita","top_ant","def_sito","tipo_sito","betweenness_norm","degree","harmonic","median_mansio","median_minor_settlement"
+"DUR022","Paper","Paper",NA,"mansio/statio","minor settlement",0.0018700327255727,2,0.043010752688172,0.00257129499766246,0.000273070468179853
+"DUR024","Elbasan","Bradashesh",NA,"mansio/statio","minor settlement",0.00257129499766246,4,0.0519713261648745,0.00257129499766246,0.000273070468179853
+"DUR054","Kavaja","Kryeluz",NA,"mansio/statio","minor settlement",0.024324802587192,12,0.347593445980543,0.00257129499766246,0.000273070468179853
+"DUR059","Kruja","Burizane",NA,"mansio/statio","minor settlement",0,1,0.0161290322580645,0.00257129499766246,0.000273070468179853
+"DUR102","Rromanat",NA,NA,"mansio/statio","minor settlement",0.00835555770968321,8,0.288530465949821,0.00257129499766246,0.000273070468179853

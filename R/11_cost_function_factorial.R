@@ -16,7 +16,7 @@
 # saved LCPs and must coincide with the objects written by 04/05/04b (Step 1,
 # blocking): this guarantees that the new cells are built exactly like the
 # pipeline networks. The new cells use run_lcp_set() (lcp_helpers.R) with the
-# same output schema as their site set. No site is moved (Task 10): a site on
+# same output schema as their site set. No site is moved: a site on
 # NoData stops the pipeline.
 #
 # Input:  output/rds/{siti,nodes,net,edges}_{hell,rom}*.rds
@@ -31,9 +31,14 @@
 #         output/tables/factorial_composition.csv
 #         output/tables/factorial_centrality_long.csv
 #         output/tables/factorial_concentration.csv
+#         output/tables/factorial_threshold_sweep.csv
 #         output/tables/factorial_upland_centres.csv
+#         output/tables/factorial_persistence.csv
 #         output/tables/factorial_tests.csv
 #         output/tables/factorial_lcp_consistency.csv
+#         output/tables/typology_by_cell.csv, top15_composition_by_cell.csv
+#         output/tables/factorial_harmonic_degree.csv, factorial_top10_location.csv
+#         output/tables/colocated_sites.csv
 #         output/tables/factorial_summary.md
 #         output/images/qc/factorial_betweenness_distributions.png
 #
@@ -268,6 +273,48 @@ concentration <- merge(CELLS[, c("cell", "site_set", "cost_fn", "threshold")],
                        concentration, by = "cell", sort = FALSE)
 write.csv(concentration, table_path("factorial_concentration.csv"), row.names = FALSE)
 
+# 3.3b Threshold sweep of the four cells: the saved pairwise costs
+# (collapsed edges, all pairs) filtered at each threshold of CONC_SWEEP_SEQ,
+# as in 04b. Same measures as factorial_concentration.csv, plus edges,
+# density and the share of nodes with zero betweenness.
+cell_edges <- list("H-T" = list(e = cell_ht$edges, n = nodes_hell),
+                   "R-W" = list(e = cell_rw$edges, n = nodes_rom),
+                   "H-W" = list(e = cell_hw$edges, n = nodes_hell),
+                   "R-T" = list(e = cell_rt$edges, n = nodes_rom))
+threshold_sweep <- do.call(rbind, lapply(names(cell_edges), function(k)
+  do.call(rbind, lapply(CONC_SWEEP_SEQ, function(t) {
+    ef <- cell_edges[[k]]$e %>% filter(cost_mean < t)
+    if (any(is.na(ef$from) | is.na(ef$to)))
+      stop("Unresolved (NA) site IDs survive the threshold filter in ", k)
+    g  <- graph_from_data_frame(d = ef, vertices = cell_edges[[k]]$n, directed = FALSE)
+    cr <- concentration_row(g, k)
+    data.frame(cell = k, site_set = CELLS$site_set[CELLS$cell == k],
+               cost_fn = CELLS$cost_fn[CELLS$cell == k], threshold = t,
+               n_nodes = vcount(g), n_edges = ecount(g), density = edge_density(g),
+               top1_share = cr$top1_share, top5_share = cr$top5_share, gini = cr$gini,
+               freeman_centralization = cr$freeman_centralization,
+               zero_share = mean(igraph::betweenness(g, normalized = TRUE) == 0),
+               top_node = cr$top_node, stringsAsFactors = FALSE)
+  }))))
+
+# Consistency (BLOCKING): H-T / R-W rows reproduce 04b at every threshold, and
+# each cell at its own threshold reproduces factorial_concentration.csv
+sw_cols <- c("n_edges", "density", "top1_share", "top5_share", "gini")
+for (k in c("H-T", "R-W")) {
+  a <- threshold_sweep[threshold_sweep$cell == k, c("threshold", sw_cols)]
+  b <- sweep[sweep$phase == if (k == "H-T") "hellenistic" else "roman", c("threshold", sw_cols)]
+  stopifnot("threshold sweep must reproduce betweenness_concentration_sweep.csv" =
+              isTRUE(all.equal(a, b, check.attributes = FALSE)))
+}
+own <- merge(threshold_sweep, CELLS[, c("cell", "threshold")], by = c("cell", "threshold"))
+own <- own[match(concentration$cell, own$cell), ]
+stopifnot("threshold sweep must reproduce factorial_concentration.csv" =
+            isTRUE(all.equal(own[, c("top1_share", "top5_share", "gini", "freeman_centralization")],
+                             concentration[, c("top1_share", "top5_share", "gini", "freeman_centralization")],
+                             check.attributes = FALSE)))
+write.csv(threshold_sweep, table_path("factorial_threshold_sweep.csv"), row.names = FALSE)
+message("Saved factorial_threshold_sweep.csv")
+
 # 3.4 Upland centres + fortified-centre category statistics
 focus_ids <- c(UPLAND_IDS_F, UPLAND_REF_ID)
 upland <- do.call(rbind, lapply(names(nets), function(k) {
@@ -312,6 +359,28 @@ fortified <- do.call(rbind, lapply(names(nets), function(k) {
 }))
 upland_tab <- rbind(upland, fortified)
 write.csv(upland_tab, table_path("factorial_upland_centres.csv"), row.names = FALSE)
+
+# 3.5 Decomposition by site persistence: sites present in both phases (dual)
+#     vs sites present only in the phase of the cell
+persistence <- do.call(rbind, lapply(names(nets), function(k) {
+  ct  <- cent_long[cent_long$cell == k, ]
+  top <- head(ct$id_sito[order(-ct$betweenness_norm, ct$id_sito)], TOP_N_OVERLAP)
+  only_lab <- if (CELLS$site_set[CELLS$cell == k] == "hellenistic") "hellenistic only" else "roman only"
+  grp <- list("both phases" = ct$dual_phase, only = !ct$dual_phase, "all sites" = rep(TRUE, nrow(ct)))
+  names(grp)[2] <- only_lab
+  do.call(rbind, lapply(names(grp), function(g) {
+    x <- ct[grp[[g]], ]
+    data.frame(cell = k, group = g, n_sites = nrow(x), share_sites = nrow(x) / nrow(ct),
+               share_betweenness = sum(x$betweenness_norm) / sum(ct$betweenness_norm),
+               median_betweenness = median(x$betweenness_norm),
+               median_degree = median(x$degree),
+               n_zero_betweenness = sum(x$betweenness_norm == 0),
+               share_zero_betweenness = mean(x$betweenness_norm == 0),
+               n_in_top10 = sum(x$id_sito %in% top),
+               stringsAsFactors = FALSE)
+  }))
+}))
+write.csv(persistence, table_path("factorial_persistence.csv"), row.names = FALSE)
 
 # ===========================================================================
 # STEP 4 — Comparisons
@@ -407,6 +476,135 @@ tests <- rbind(
 )
 tests$comparison_type[tests$cell_a == "H-T" & tests$cell_b == "R-W"] <- "diagonal_reference"
 write.csv(tests, table_path("factorial_tests.csv"), row.names = FALSE)
+
+# ===========================================================================
+# STEP 4b — Site typology, harmonic vs degree, top-10 location, co-located
+#           sites
+# ===========================================================================
+message("\n[11] Step 4b — typology, harmonic/degree, top-10 location, co-located sites")
+
+site_lab  <- read_site_labels()
+site_xy   <- rbind(data.frame(id_sito = siti_hell$id_sito, sf::st_coordinates(siti_hell)),
+                   data.frame(id_sito = siti_rom$id_sito,  sf::st_coordinates(siti_rom)))
+site_xy   <- site_xy[!duplicated(site_xy$id_sito), ]
+cent_lab  <- merge(merge(cent_long, site_lab, by = "id_sito"), site_xy, by = "id_sito")
+stopifnot("every cell node needs labels and coordinates" = nrow(cent_lab) == nrow(cent_long))
+top_n_of <- function(ct, n) head(ct[order(-ct$betweenness_norm, ct$id_sito), ], n)
+
+# 4b.1 Betweenness by site category: Kruskal-Wallis + per-category statistics.
+# Two levels: tipo_sito (functional category) and def_sito (site definition).
+# Sites without a label at the level are excluded (DUR143 has no tipo_sito);
+# NA is never a level.
+TYPO_LEVELS <- c(tipo_sito = "tipo_en", def_sito = "def_en")
+typology <- do.call(rbind, lapply(CELLS$cell, function(k) do.call(rbind, lapply(names(TYPO_LEVELS), function(lv) {
+  ct  <- cent_lab[cent_lab$cell == k & !is.na(cent_lab[[lv]]), ]
+  grp <- ct[[TYPO_LEVELS[[lv]]]]
+  kw  <- kruskal.test(ct$betweenness_norm, factor(grp))
+  kw_row <- data.frame(cell = k, level = lv, row_type = "kruskal_wallis",
+                       category_en = "(all)", category_orig = "(all)",
+                       n_sites = nrow(ct), n_categories = length(unique(grp)),
+                       statistic = unname(kw$statistic), df = unname(kw$parameter),
+                       p_value = kw$p.value,
+                       btw_median = NA_real_, btw_max = NA_real_,
+                       btw_max_site = NA_character_, btw_max_toponym = NA_character_,
+                       degree_median = NA_real_, stringsAsFactors = FALSE)
+  cats <- names(sort(table(grp), decreasing = TRUE))
+  cat_rows <- do.call(rbind, lapply(cats, function(cg) {
+    d <- ct[grp == cg, ]
+    m <- d[order(-d$betweenness_norm, d$id_sito)[1], ]
+    data.frame(cell = k, level = lv, row_type = "category",
+               category_en = cg, category_orig = d[[lv]][1],
+               n_sites = nrow(d), n_categories = NA_integer_,
+               statistic = NA_real_, df = NA_real_, p_value = NA_real_,
+               btw_median = median(d$betweenness_norm), btw_max = max(d$betweenness_norm),
+               btw_max_site = m$id_sito, btw_max_toponym = m$toponym,
+               degree_median = median(d$degree), stringsAsFactors = FALSE)
+  }))
+  rbind(kw_row, cat_rows)
+}))))
+stopifnot("tipo_sito: four functional categories in every cell" =
+            all(typology$n_categories[typology$row_type == "kruskal_wallis" &
+                                        typology$level == "tipo_sito"] == 4))
+write.csv(typology, table_path("typology_by_cell.csv"), row.names = FALSE)
+
+# 4b.2 Composition of the 15 nodes with the highest betweenness
+TOP_N_COMPOSITION <- 15
+top15 <- do.call(rbind, lapply(CELLS$cell, function(k) {
+  ct  <- cent_lab[cent_lab$cell == k, ]
+  top <- top_n_of(ct, TOP_N_COMPOSITION)
+  # ties across the cut-off would make the composition depend on id order
+  tie <- sum(ct$betweenness_norm == min(top$betweenness_norm)) >
+         sum(top$betweenness_norm == min(top$betweenness_norm))
+  do.call(rbind, lapply(names(TYPO_LEVELS), function(lv) {
+    col  <- TYPO_LEVELS[[lv]]
+    cats <- names(sort(table(top[[col]]), decreasing = TRUE))
+    data.frame(cell = k, level = lv, category_en = cats,
+               n_top15 = as.integer(table(top[[col]])[cats]),
+               n_in_cell = vapply(cats, function(cg) sum(ct[[col]] == cg), integer(1)),
+               share_top15 = as.integer(table(top[[col]])[cats]) / TOP_N_COMPOSITION,
+               top15_sites = vapply(cats, function(cg)
+                 paste(top$id_sito[top[[col]] == cg], collapse = ";"), character(1)),
+               min_btw_top15 = min(top$betweenness_norm), tie_at_cutoff = tie,
+               stringsAsFactors = FALSE, row.names = NULL)
+  }))
+}))
+write.csv(top15, table_path("top15_composition_by_cell.csv"), row.names = FALSE)
+
+# 4b.3 Spearman correlation between degree and harmonic centrality
+harm_deg <- do.call(rbind, lapply(CELLS$cell, function(k) {
+  ct <- cent_long[cent_long$cell == k, ]
+  sp <- suppressWarnings(cor.test(ct$degree, ct$harmonic, method = "spearman", exact = FALSE))
+  data.frame(cell = k, n_nodes = nrow(ct), rho_degree_harmonic = unname(sp$estimate),
+             p_value = sp$p.value, stringsAsFactors = FALSE)
+}))
+check_published("Spearman degree-harmonic: 0.995 / 0.994 / 0.970 / 0.961 (H-T / R-T / H-W / R-W)" =
+  isTRUE(all.equal(round(harm_deg$rho_degree_harmonic[match(c("H-T", "R-T", "H-W", "R-W"), harm_deg$cell)], 3),
+                   c(0.995, 0.994, 0.970, 0.961))))
+write.csv(harm_deg, table_path("factorial_harmonic_degree.csv"), row.names = FALSE)
+
+# 4b.4 Location of the ten nodes with the highest betweenness
+top10_loc <- do.call(rbind, lapply(CELLS$cell, function(k) {
+  top <- top_n_of(cent_lab[cent_lab$cell == k, ], TOP_N_OVERLAP)
+  sites <- data.frame(cell = k, row_type = "site", rank = seq_len(nrow(top)),
+                      id_sito = top$id_sito, toponym = top$toponym, def_sito = top$def_en,
+                      betweenness_norm = top$betweenness_norm,
+                      x_utm = top$X, y_utm = top$Y,
+                      east_median_km = NA_real_, east_sd_km = NA_real_,
+                      ew_extent_km = NA_real_, ns_extent_km = NA_real_, stringsAsFactors = FALSE)
+  summ <- data.frame(cell = k, row_type = "summary", rank = NA_integer_,
+                     id_sito = NA_character_, toponym = NA_character_, def_sito = NA_character_,
+                     betweenness_norm = NA_real_, x_utm = NA_real_, y_utm = NA_real_,
+                     east_median_km = median(top$X) / 1000, east_sd_km = sd(top$X) / 1000,
+                     ew_extent_km = diff(range(top$X)) / 1000,
+                     ns_extent_km = diff(range(top$Y)) / 1000, stringsAsFactors = FALSE)
+  rbind(sites, summ)
+}))
+ts <- top10_loc[top10_loc$row_type == "summary", ]
+ts <- ts[match(c("H-T", "R-T", "H-W", "R-W"), ts$cell), ]
+check_published("top-10 easting median / sd (km): 378.2/5.6, 389.5/9.2, 375.9/4.7, 377.5/3.6" =
+  isTRUE(all.equal(round(ts$east_median_km, 1), c(378.2, 389.5, 375.9, 377.5))) &&
+  isTRUE(all.equal(round(ts$east_sd_km, 1), c(5.6, 9.2, 4.7, 3.6))))
+write.csv(top10_loc, table_path("factorial_top10_location.csv"), row.names = FALSE)
+
+# 4b.5 Co-located Hellenistic sites: pairs within COLOCATED_DIST of each other
+COLOCATED_DIST <- 250   # m
+dmat <- sf::st_distance(siti_hell)
+pairs <- which(upper.tri(dmat) & as.numeric(dmat) <= COLOCATED_DIST, arr.ind = TRUE)
+colocated <- data.frame(
+  id_a = siti_hell$id_sito[pairs[, 1]], id_b = siti_hell$id_sito[pairs[, 2]],
+  distance_m = as.numeric(dmat[pairs]), stringsAsFactors = FALSE)
+colocated <- colocated[order(colocated$distance_m), ]
+lab_of <- function(ids, col) site_lab[[col]][match(ids, site_lab$id_sito)]
+colocated$toponym_a  <- lab_of(colocated$id_a, "toponym")
+colocated$toponym_b  <- lab_of(colocated$id_b, "toponym")
+colocated$def_sito_a <- lab_of(colocated$id_a, "def_en")
+colocated$def_sito_b <- lab_of(colocated$id_b, "def_en")
+colocated$both_roman <- colocated$id_a %in% siti_rom$id_sito & colocated$id_b %in% siti_rom$id_sito
+rownames(colocated) <- NULL
+message(sprintf("Co-located Hellenistic sites (<= %d m): %d pairs, %d distinct sites (%s)",
+                COLOCATED_DIST, nrow(colocated), length(unique(c(colocated$id_a, colocated$id_b))),
+                paste(sort(unique(c(colocated$id_a, colocated$id_b))), collapse = ", ")))
+write.csv(colocated, table_path("colocated_sites.csv"), row.names = FALSE)
 
 # ---------------------------------------------------------------------------
 # QC figure — betweenness distributions (rank-size), four panels
@@ -525,7 +723,7 @@ comp_lines <- apply(composition, 1, function(r) sprintf(
   gsub(";", ", ", r[["isolates"]])))
 
 md <- c(
-  "# Task 9 — Disegno fattoriale 2×2: lettura dei risultati",
+  "# Disegno fattoriale 2×2: lettura dei risultati",
   "",
   sprintf("Generato da `R/11_cost_function_factorial.R` il %s. Solo numeri, nessuna interpretazione.", Sys.Date()),
   "",

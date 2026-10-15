@@ -1,6 +1,0 @@
-median minor settlement must equal baseline
-baseline: q3_top10_betweenness_hellenistic.csv
-baseline: q7_late_antique_horizon.csv
-baseline: road_stations_check.csv
-baseline: station_modules.csv
-baseline: station_network_roles.csv

@@ -1,0 +1,30 @@
+"row_type","tipo_sito_en","def_sito_en","tipo_sito_orig","def_sito_orig","n_dataset","n_hellenistic","n_roman","n_dual"
+"type","urban settlement","city","urban settlement","città",3,3,3,3
+"type","urban settlement","fortified centre","urban settlement","centro fortificato",2,1,2,1
+"category total","urban settlement","(all)","urban settlement","(all)",5,4,5,4
+"type","minor settlement","generic settlement","minor settlement","insediamento generico",21,9,17,8
+"type","minor settlement","fortified centre","minor settlement","centro fortificato",15,8,10,5
+"type","minor settlement","funerary complex","minor settlement","complesso funerario",12,5,9,5
+"type","minor settlement","necropolis","minor settlement","necropoli",8,3,6,2
+"type","minor settlement","road station (mansio/statio)","minor settlement","mansio/statio",5,0,5,0
+"type","minor settlement","vicus","minor settlement","vicus",2,0,2,0
+"type","minor settlement","monastic complex","minor settlement","complesso monastico",1,0,1,0
+"type","minor settlement","burial","minor settlement","sepoltura",1,0,0,0
+"category total","minor settlement","(all)","minor settlement","(all)",65,25,50,20
+"type","rural settlement","farmstead","rural settlement","fattoria",22,15,10,8
+"type","rural settlement","generic settlement","rural settlement","insediamento generico",21,16,8,6
+"type","rural settlement","villa","rural settlement","villa",10,4,10,4
+"type","rural settlement","funerary complex","rural settlement","complesso funerario",3,3,3,3
+"type","rural settlement","burial","rural settlement","sepoltura",3,0,2,0
+"type","rural settlement","unspecified","rural settlement","(missing)",1,0,0,0
+"type","rural settlement","necropolis","rural settlement","necropoli",1,0,1,0
+"category total","rural settlement","(all)","rural settlement","(all)",61,38,34,21
+"type","sacred place","Early Christian basilica","sacred place","basilica paleocristiana",5,1,5,1
+"type","sacred place","sanctuary","sacred place","santuario",4,2,0,0
+"type","sacred place","church","sacred place","chiesa",1,0,0,0
+"category total","sacred place","(all)","sacred place","(all)",10,3,5,1
+"type","frequentation area","generic settlement","area di frequentazione","insediamento generico",1,0,0,0
+"category total","frequentation area","(all)","area di frequentazione","(all)",1,0,0,0
+"type","unclassified","sanctuary","(missing)","santuario",1,1,0,0
+"category total","unclassified","(all)","(missing)","(all)",1,1,0,0
+"grand total","(all)","(all)","(all)","(all)",143,71,94,46

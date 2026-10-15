@@ -1,0 +1,4 @@
+"segment","cost_function","geom_type","n_parts","area_candidate_1","area_candidate_2","area_selected","max_distance","pdi","normalised_pdi","was_valid_before","n_crossings","rank_within_segment","sum_area_segments","area_ratio_full_vs_segments","pct_within_1km","pct_within_5km"
+"full route (truncated)","wheeled transport","MULTIPOLYGON",3,844280779.838603,839806164.051654,839806164.051654,57797.8489160114,14530.0591596759,25.1394462461573,FALSE,4,3,23852938.1545574,35.2076611531062,10.261790857353,27.7216879641804
+"full route (truncated)","tobler","MULTIPOLYGON",4,698295709.590595,703263427.255935,698295709.590595,57797.8489160114,12081.6902823723,20.9033562822186,FALSE,2,2,480552695.784622,1.45310954597904,11.1368092046424,32.5821701521903
+"full route (truncated)","straight baseline","MULTIPOLYGON",3,619854983.465904,619854983.465904,619854983.465904,57797.8489160114,10724.5337861387,18.5552472752455,FALSE,2,1,NA,NA,8.38479619975045,34.7049369532266

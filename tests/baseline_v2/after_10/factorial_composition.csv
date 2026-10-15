@@ -1,0 +1,5 @@
+"cell","site_set","cost_fn","threshold","status","n_nodes","n_edges","density","median_degree","median_degree_non_isolates","n_isolates","isolates","n_components","giant_size","giant_pct"
+"H-T","hellenistic","tobler",240,"published",71,1111,0.447082494969819,39,39,0,"",2,68,95.7746478873239
+"R-W","roman","wheeled transport",150,"published",94,379,0.0867078471745596,8,9,5,"DUR016;DUR029;DUR030;DUR052;DUR053",12,66,70.2127659574468
+"H-W","hellenistic","wheeled transport",150,"new",71,441,0.177464788732394,9,9,7,"DUR003;DUR015;DUR025;DUR032;DUR041;DUR051;DUR053",12,52,73.2394366197183
+"R-T","roman","tobler",240,"new",94,1612,0.368794326241135,37.5,37.5,0,"",1,94,100

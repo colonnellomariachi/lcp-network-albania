@@ -1,29 +1,46 @@
-# R workspace files
+# R / RStudio session files
 .RData
-.RDataTmp
-.RDataTmp1
+.RDataTmp*
 .Rhistory
+**/.Rhistory
 .Rproj.user/
+.httr-oauth
+.quarto
+Rplots.pdf
 
 # OS cruft
 .DS_Store
 Thumbs.db
 
-# Large raster / cost-surface files and generated outputs (host on Zenodo instead)
-data/
-output/rds/*.rds
-output/rds/*.gpkg
-output/tables/*.csv
-output/images
-
-# Superseded/exploratory code and internal working notes — content archived
-# in the Zenodo supplementary material, not tracked here
-archive/
+# Claude Code local files and internal working notes
+/.claude/
+CLAUDE.md
+UPDATE.md
 REFACTOR_NOTES.md
 
-# Claude Code local session files
-/.claude
-CLAUDE.md
-.Rproj.user
-.httr-oauth
-.quarto
+# Input data: hosted on Zenodo (see README)
+data/
+data.zip
+
+# Previous states, superseded scripts, first-submission surfaces (11 GB)
+archive/
+
+# Material staged for the Zenodo deposit
+zenodo_staging/
+
+# Generated, large or intermediate outputs
+output/rds/
+output/images/qc/
+output/images/*
+!output/images/fig0[1-9]_*.png
+!output/images/fig10_*.png
+output/images/fig04_networks.png
+output/*.log
+output/task*_rerun*.R
+output/task15_before_after.csv
+output/tables/regression_log.txt
+output/tables/rerun_diff_report.md
+output/tables/*.zip
+# Markdown summaries written by 11-13 and tests/determinism_check.R
+# (working notes; the CSV tables hold all the numbers)
+output/tables/*.md

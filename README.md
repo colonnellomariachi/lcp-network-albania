@@ -1,206 +1,211 @@
-# South Illyria Least-Cost Path Network Analysis
+# South Illyria least-cost path networks
 
-## Project purpose
+R pipeline for a landscape-archaeology study of connectivity in southern
+Illyria (central Albania) in the Hellenistic (300–31 BC) and Roman (31 BC – AD
+450) periods. Least-cost paths between archaeological sites are computed on a
+DEM with two cost functions (Tobler's hiking function and wheeled transport),
+filtered by travel-time thresholds into networks, and compared through
+centrality, community detection and null models. The modelled routes are
+validated against the Via Egnatia as digitised in Itiner-e.
 
-This repository contains the full computational pipeline for a landscape
-archaeology study modelling ancient connectivity in southern Illyria (modern
-Albania) during the Hellenistic (300–31 BC) and Roman (31 BC – AD 450) periods.
-The method constructs least-cost path (LCP) networks from a 25 m digital
-elevation model, applies cost functions appropriate to each period (Tobler's
-walking speed / wheeled transport), filters edges by travel-time thresholds,
-and computes standard network-centrality metrics (degree, harmonic centrality,
-normalised betweenness). The spatial structure of the Roman network is further
-tested with Leiden community detection and two null models. A validation step
-compares modelled routes against the digitised Via Egnatia itinerary, using a
-locally corrected implementation of the path deviation index (see
-"Known issue: PDI validation" below).
-
-The results are published in:
-> [CITATION PLACEHOLDER — to be updated with journal reference and DOI]
-
-Archived dataset:
-> Zenodo DOI: [PLACEHOLDER]
-
----
-
-## Requirements
-
-| Component      | Version tested | Notes |
-|-----------------|---------------|-------|
-| R               | 4.5.1 (2025-06-13) | |
-| leastcostpath   | 2.0.13        | Pinned, not a minimum. See "Known issue" below — behaviour on self-intersecting polygons is version- and GEOS-dependent, and has not been verified against other releases. |
-| GEOS            | 3.13.1        | System dependency of `sf`. Affects `st_area()` behaviour on invalid geometries; do not assume a different GEOS version reproduces the PDI bug identically. |
-| GDAL            | 3.11.0        | System dependency of `sf`/`terra`. |
-| PROJ            | 9.6.0         | System dependency of `sf`/`terra`. |
-| igraph          | ≥ 2.0.0       | |
-| sf              | 1.0.21        | |
-| terra           | ≥ 1.7         | |
-| dplyr           | ≥ 1.1         | |
-| tidyr           | ≥ 1.3         | |
-| ggplot2         | ≥ 3.5         | |
-| ggrepel         | ≥ 0.9         | |
-| here            | ≥ 1.0         | |
-
-Install R package dependencies with:
-
-```r
-install.packages(c("leastcostpath", "igraph", "sf", "terra",
-                   "dplyr", "tidyr", "ggplot2", "ggrepel", "here"))
-```
-
-System libraries (GEOS/GDAL/PROJ) must be installed separately and are not
-managed by this script; see the `sf` package installation guide for your
-platform. A full session snapshot is written to
-`output/tables/session_info.txt` on every run — compare it against the
-versions above if a result cannot be reproduced.
-
----
-
-## How to run
-
-1. Clone or download the repository.
-2. Download the large data files from Zenodo (DOI above) and place them
-   in `data/` as listed in the Input data section below.
-3. Open `south ill lcp.Rproj` in RStudio (or `cd` to the project root in a
-   terminal), then:
-
-```r
-source("run_all.R")
-```
-
-Individual scripts can be sourced independently after running `00_setup.R`,
-provided their input RDS files already exist in `output/rds/`.
-
----
-
-## Input data
-
-| File | Description | Source |
-|------|-------------|--------|
-| `data/dem.tif` | 25 m DEM, EPSG:32634, RMSE 2.9 m | [PLACEHOLDER: data source/citation] |
-| `data/sites.gpkg` | 144 archaeological sites with chronological attributes ; includes DUR024 corrected in two steps — a raw coordinate fix, then a snap to the digitised route (documented in the Zenodo supplementary material, not in this repository) |Moderato, M. (2021). Dinamiche insediative nel paesaggio storico di Durrës fra età classica e tarda antichità. Edipuglia.
- |
-| `data/egnatia_itinere.gpkg` | Digitised Via Egnatia itinerary; feature `Dyrrhachium-Scampis` used for validation | Itiner-e (De Soto et al., 2025) |
-
----
-
-## Known issue: PDI validation (fixed locally)
-
-`leastcostpath::PDI_validation()` (v. 2.0.13) computes the path deviation
-index from a polygon built between the modelled and comparison lines, calling
-`sf::st_area()` without first checking or repairing geometric validity. Where
-the two lines cross, the resulting polygon self-intersects, and `st_area()`
-returns a signed algebraic area that can understate the true deviation by
-more than two orders of magnitude; the same corrupted areas can also cause
-`which.min()` to select the wrong candidate polygon.
-
-A corrected implementation, `pdi_fixed()`, is provided in
-`R/functions/pdi_validation_fixed.R`. It applies `sf::st_make_valid()` to both
-candidate polygons before any area is computed and before selection, and sums
-all resulting polygon parts. `08_egnatia_validation.R` calls this function
-alongside the untouched package function, so both the original and corrected
-values are retained (`egnatia_validation_segments.csv` / `_full.csv` for the
-former, `egnatia_pdi_final.csv` for the latter).
-
-Full diagnosis, the correction procedure, the effect on every reported value,
-and independent geometric verification are documented in the supplementary
-material accompanying the manuscript (Zenodo deposit). An issue describing
-the bug has been filed against the upstream package (Lewis, 2023):
-[ISSUE URL PLACEHOLDER].
-
----
-
-## Output description
-
-| Path | Contents |
-|------|----------|
-| `output/tables/centrality_comparison.csv` | Per-site degree, harmonic centrality, and normalised betweenness for both phases — the primary analytical output |
-| `output/tables/threshold_sweep_roman.csv` | Roman network metrics across 30–300 min thresholds |
-| `output/tables/betweenness_concentration_sweep.csv` | Betweenness concentration (top-1 share, Gini) at matched network density, Hellenistic vs Roman |
-| `output/tables/community_by_sitetype.csv` | Leiden community × site-type cross-table |
-| `output/tables/null_model_results.csv` | Null model p-values |
-| `output/tables/egnatia_validation_segments.csv` | PDI and buffer overlap per route segment, **original package function, pre-correction** — retained for comparison only |
-| `output/tables/egnatia_validation_full.csv` | PDI for the full Dyrrachium–Scampis route, **original package function, pre-correction** — retained for comparison only |
-| `output/tables/egnatia_pdi_final.csv` | Corrected PDI values, all segments and full route — canonical source for the manuscript |
-| `output/tables/egnatia_pdi_comparison_bug.csv` | Side-by-side comparison, original vs corrected PDI, all cases |
-| `output/tables/egnatia_corridor_containment.csv` | Attested-route containment within modelled cost-corridor quantiles, per segment and cost function |
-| `output/tables/full_route_truncated_comparison.csv` | Full-route PDI against a comparison line truncated to match the combined extent of the three segments |
-| `output/tables/pdi_geom_diagnostics.csv` | Geometry class, part count, and area-sum check for corrected PDI polygons (segment-level cases) |
-| `output/tables/pdi_independent_check.csv` | Resampling-based independent validation of corrected PDI values |
-| `output/tables/session_info.txt` | R session info for reproducibility |
-| `output/images/fig_boxplot_centrality.png` | Boxplots of centrality by phase |
-| `output/images/fig_scatter_dualphase.png` | Dual-phase site scatter plot |
-| `output/images/fig_map_degree.png` | Geographic map — degree centrality |
-| `output/images/fig_map_harmonic.png` | Geographic map — harmonic centrality |
-| `output/images/fig_map_betweenness.png` | Geographic map — betweenness |
-| `output/images/qc/*.png` | PDI polygon quality-control panels (post-`st_make_valid()`), not used in the manuscript figures |
-| `output/rds/*.rds` | Intermediate objects (networks, edge tables, cost surfaces, LCPs, digitised route) |
-
----
-
-## Verification
-
-After running the pipeline, compare the regenerated tables against the
-baseline copies retained in the project root:
-
-```r
-baseline <- read.csv("centrality_comparison.csv")
-new_file <- read.csv("output/tables/centrality_comparison.csv")
-all.equal(baseline, new_file)   # must return TRUE
-
-baseline_pdi <- read.csv("egnatia_pdi_final.csv")
-new_pdi <- read.csv("output/tables/egnatia_pdi_final.csv")
-all.equal(baseline_pdi, new_pdi)   # must return TRUE
-```
-
-Any discrepancy indicates a behaviour change and must be investigated before
-updating the manuscript.
+Article: [ARTICLE CITATION]
 
 ---
 
 ## Repository structure
 
 ```
-├── R/
-│   ├── 00_setup.R              # libraries, paths, all parameters 
-│   ├── 01_chronology.R
-│   ├── 02_cost_surfaces.R
-│   ├── 03_least_cost_paths.R
-│   ├── 04_networks.R
-│   ├── 05_centrality.R
-│   ├── 06_community_detection.R
-│   ├── 07_null_models.R
-│   ├── 08_egnatia_validation.R # calls both PDI_validation() and pdi_fixed()
-│   ├── 09_figures.R
-│   ├── 10_discussion_checks.R  # chronological and network-structural checks
-│   │                           # supporting Discussion Sections 5.5–5.6
-│   │                           # (site-count vs 146 BC boundary, road-station
-│   │                           # module membership) 
-│   └── functions/
-│       ├── chronology_helpers.R
-│       ├── network_helpers.R
-│       ├── route_helpers.R
-│       └── pdi_validation_fixed.R   # pdi_fixed(): corrected PDI implementation
-├── data/                       # inputs only — never written to
+├── R/                    analysis scripts 00–13 and shared functions (R/functions/)
+├── tests/                regression baselines and stand-alone checks
 ├── output/
-│   ├── tables/
-│   ├── images/
-│   │   └── qc/                 # PDI polygon QC panels
-│   └── rds/
-├── run_all.R
-├── README.md
+│   ├── tables/           result tables (CSV) and session info
+│   ├── images/           Figures 1–10 of the article
+│   └── rds/              intermediate objects (not in the repository; see "How to run")
+├── supplementary/        README for the supplementary documents S1 and S2 (on Zenodo)
+├── data/                 input data (not in the repository; see "Data")
+├── run_all.R             runs the whole pipeline
 └── LICENSE
 ```
 
-Superseded and exploratory scripts are not tracked in this repository; where
-a documented result depended on such a script, that dependency is recorded in
-the Zenodo supplementary material rather than as a file here.
+Scripts, in the order run by `run_all.R`:
 
-```
+| Script | Function |
+|---|---|
+| `00_setup.R` | Libraries, path helpers and all global parameters (phase limits, thresholds, seeds) |
+| `01_chronology.R` | Assigns sites to the Hellenistic and Roman phases (minimum overlap 25 years): 71 and 94 sites, 46 in both |
+| `02_cost_surfaces.R` | Tobler and wheeled-transport cost surfaces from the DEM (16 neighbours) |
+| `03_least_cost_paths.R` | Least-cost paths between all pairs of sites (Hellenistic sites with Tobler, Roman sites with wheeled transport) |
+| `04_networks.R` | Networks below the travel-time threshold (240 min Tobler, 150 min wheeled), centrality, threshold sweep |
+| `04b_betweenness_concentration_sweep.R` | Betweenness concentration across thresholds |
+| `05_centrality.R` | Exports per-site centrality (`centrality_comparison.csv`) |
+| `06_community_detection.R` | Weighted Leiden communities of the largest component of the Roman wheeled-transport network |
+| `07_null_models.R` | Modularity against 999 degree-preserving and 999 spatial null networks |
+| `08_egnatia_validation.R` | Via Egnatia: route stitching, per-segment and full-route LCPs, corrected PDI, cost corridors and containment |
+| `10_discussion_checks.R` | Chronological and network checks cited in the Discussion (post-146 BC sites, road stations, site typology, late-antique horizon) |
+| `11_cost_function_factorial.R` | 2 × 2 design, site set × cost function (H-T, H-W, R-T, R-W) |
+| `09_figures.R` | Figures 1–10 (runs after `11`, whose tables it reads) |
+| `12_hydrographic_sensitivity.R` | Sensitivity to a river-crossing penalty (× 5, × 20) |
+| `13_size_horizon_sensitivity.R` | Sensitivity to the end of the Roman phase (AD 300) and to network size (71-site subsamples) |
+
+`R/functions/` holds the shared helpers (chronology, LCP computation, network
+construction, route stitching, site labels and the corrected PDI).
+`R/pdi_qc_plots.R` draws quality-control plots of the PDI polygons and is not
+run by `run_all.R`.
+
+---
+
+## Data
+
+The four input files go in `data/`. Download them from the Zenodo deposit
+[ZENODO CONCEPT DOI], version [ZENODO VERSION].
+
+| File | Contents | Source |
+|---|---|---|
+| `sites.gpkg` | 143 archaeological sites with chronological attributes, EPSG:32634 | Moderato, M. (2021). *Dinamiche insediative nel paesaggio storico di Durrës fra età classica e tarda antichità*. Edipuglia |
+| `dem.tif` | DEM, 25 m, EPSG:32634, used as it is | EU-DEM v1.1, Copernicus Land Monitoring Service |
+| `egnatia_itinere.gpkg` | Digitised Roman roads; the `Dyrrhachium-Scampis` feature is used for validation | Itiner-e (de Soto et al. 2025) |
+| `river polygon.gpkg` | Polygons of the main rivers and lakes, used only by `12` | Produced by the author |
+
+---
+
+## Requirements
+
+Versions of the last complete run (`output/tables/session_info.txt`):
+
+| Component | Version |
+|---|---|
+| R | 4.5.1 (2025-06-13), Windows 11 x64 |
+| leastcostpath | 2.0.13 |
+| sf | 1.0-21 |
+| terra | 1.8-93 |
+| igraph | 2.1.4 |
+| dplyr | 1.1.4 |
+| tidyr | 1.3.1 |
+| ggplot2 | 4.0.0 |
+| ggrepel | 0.9.6 |
+| ggspatial | 1.1.10 |
+| patchwork | 1.3.2 |
+| here | 1.0.2 |
+| GEOS / GDAL / PROJ | 3.13.1 / 3.11.0 / 9.6.0 |
+
+Figure 1 also needs `rnaturalearth` and `rnaturalearthhires` (for the
+country boundaries of the locator map).
+
+```r
+install.packages(c("leastcostpath", "sf", "terra", "igraph", "dplyr", "tidyr",
+                   "ggplot2", "ggrepel", "ggspatial", "patchwork", "here",
+                   "rnaturalearth"))
+install.packages("rnaturalearthhires", repos = "https://ropensci.r-universe.dev")
 ```
 
 ---
 
-## License
+## How to run
 
-Code: MIT
+From the project root:
+
+```r
+source("run_all.R")      # or, from a terminal: Rscript run_all.R
+```
+
+- **Duration.** The last complete run took about 6 h 20 min. The slow steps
+  are `02`, `03`, the new least-cost paths of `11` (only on the first run)
+  and `12`.
+- **Memory.** `08` needs about 35 GB: it ran on a machine with 32 GB of RAM
+  plus paging.
+- **Skipping the slow steps.** All intermediate objects are written to
+  `output/rds/`. To skip the slow steps, download them from the Zenodo
+  deposit and place them in `output/rds/`. `11` and `12` reuse existing
+  least-cost paths, and every script can be run on its own after
+  `R/00_setup.R` once its inputs exist.
+
+---
+
+## Reproducibility
+
+- **Determinism.** The pipeline is deterministic. The cost surfaces are
+  computed from the DEM as it is. Every random step runs under a seed
+  declared in `R/00_setup.R`: Leiden (`COMMUNITY_SEED`), null models
+  (`NULL1_SEED`, `NULL2_SEED`, `NULL2_STABILITY_SEEDS`), subsampling
+  (`SUBSAMPLE_SEED`) and label placement in the figures.
+- **Regression.** Every regenerated table is compared with its baseline in
+  `tests/baseline_v2/` (27 tables) and `tests/baseline_v2/after_10/` (21
+  tables), with `all.equal` and tolerance 1e-8. With
+  `STRICT_REGRESSION <- TRUE` (default) any difference stops the run.
+- **Determinism check (run by hand).** `tests/determinism_check.R`
+  recomputes the cost surfaces and the Roman wheeled-transport network in a
+  fresh session and compares them bit for bit with the saved objects (about
+  45 min). It writes a local report, `output/tables/determinism_check.md`.
+
+---
+
+## Outputs
+
+**Tables.** `output/tables/`: one CSV per result, written by the script named
+in its header comment. The main ones:
+
+| Table | Contents |
+|---|---|
+| `centrality_comparison.csv` | Per-site centrality in the two published networks |
+| `factorial_*.csv` | The 2 × 2 design |
+| `egnatia_pdi_final.csv` | Corrected PDI, the canonical values |
+| `null_model_results.csv` | Null-model tests |
+
+`session_info.txt` lists the package versions of the last run.
+
+**Figures.** `output/images/`:
+
+| Figure | File |
+|---|---|
+| 1 | `fig01_sites_dem.png` |
+| 2 | `fig02_networks_tobler.png` |
+| 3 | `fig03_networks_wheeled.png` |
+| 4 | `fig04_boxplot_centrality.png` |
+| 5 | `fig05_centrality_maps.png` |
+| 6 | `fig06_communities.png` |
+| 7 | `fig07_scatter_dualphase.png` |
+| 8 | `fig08_threshold_sensitivity.png` |
+| 9 | `fig09_egnatia_full_corridors.png` |
+| 10 | `fig10_egnatia_segments.png` |
+
+Quality-control plots go to `output/images/qc/` (not in the repository).
+
+**Supplementary material.** S1 and S2 (docx) are deposited on Zenodo; see
+`supplementary/README.md`.
+
+---
+
+## Corrected PDI
+
+`leastcostpath::PDI_validation()` (version 2.0.13) computes the area between
+the modelled and the attested route without first repairing the polygon. When
+the two routes cross, the polygon self-intersects and the area, and hence the
+PDI, is wrong. `R/functions/pdi_validation_fixed.R` provides `pdi_fixed()`,
+which repairs both candidate polygons with `sf::st_make_valid()` before
+computing and comparing their areas. `08` reports both values
+(`egnatia_pdi_comparison_bug.csv`); the corrected ones are in
+`egnatia_pdi_final.csv`.
+
+See Supplementary Material S1 and [LEASTCOSTPATH ISSUE URL].
+
+---
+
+## Licences and attribution
+
+- **Code:** MIT licence (see `LICENSE`).
+- **Tables, figures and documentation** in this repository: CC BY 4.0.
+- **DEM:** Produced using Copernicus data and information funded by the
+  European Union — EU-DEM v1.1, Copernicus Land Monitoring Service, European
+  Environment Agency. The file is a clipped and reprojected subset of the
+  original.
+- **Via Egnatia route:** Itiner-e (de Soto et al. 2025), CC BY 4.0.
+- **Country boundaries of Figure 1:** Natural Earth (public domain).
+
+---
+
+## Citation
+
+If you use this code or its results, please cite:
+
+- [ARTICLE CITATION]
+- Code and data: [ZENODO CONCEPT DOI]

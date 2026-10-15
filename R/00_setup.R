@@ -29,20 +29,19 @@ CRS_UTM <- 32634   # WGS 84 / UTM zone 34N
 HELL_START <- -300   # Hellenistic window opens
 ROM_BOUND  <-  -31   # Hellenistic closes / Roman opens
 ROM_END    <-  450   # Roman window closes
-# NOTE: The task specification listed ROM_END = 300, but the analysis scripts
-# use 450; see REFACTOR_NOTES.md §1 for details.
+# NOTE: the Roman window closes at AD 450, so that late-antique sites overlapping
+# AD 300–450 enter the Roman network; 13 tests the alternative closure at AD 300
+# (ROM_END_ALT).
 
 # Minimum temporal overlap for a site to be included in a phase (years).
 # One generation; prevents boundary-grazing false positives.
 MIN_OVERLAP_YEARS <- 25
 
 # --- Cost-surface parameters -------------------------------------------------
-DEM_RMSE   <- 2.9          # vertical RMSE of the DEM (metres)
-# add_dem_error() draws one random error per DEM cell. Until Task 10 no seed
-# was set, so the cost surfaces behind the first submission cannot be
-# regenerated (they are kept in archive/pre_task10_2026-10-05/rds/). From
-# Task 10 the draw is seeded and 02 is reproducible.
-DEM_ERROR_SEED <- 20261005
+# The cost surfaces are computed from the DEM as it is. No random vertical
+# error is added (leastcostpath::add_dem_error() is not used): the
+# networks compared here differ by cost function and site set, and the
+# workflow is kept free of any stochastic component.
 NEIGHBOURS <- 16           # raster connectivity for LCP computation
 
 COST_FN_HELL <- "tobler"              # walking / Hellenistic network
@@ -55,6 +54,9 @@ ROM_THRESH  <- 150   # edges with cost_mean >= this value are excluded
 # --- Sensitivity sweep (Roman network, 02c) ----------------------------------
 SENSITIVITY_SEQ <- seq(30, 300, by = 30)   # thresholds tested (minutes)
 
+# --- Betweenness concentration sweep (04b; four factorial cells in 11) -------
+CONC_SWEEP_SEQ <- seq(90, 300, by = 30)    # thresholds tested (minutes)
+
 # --- Community detection (Leiden) -------------------------------------------
 LEIDEN_RESOLUTION <- 1          # resolution parameter for modularity optimisation
 COMMUNITY_SEED    <- 42         # random seed passed to set.seed() before cluster_leiden
@@ -62,19 +64,30 @@ COMMUNITY_SEED    <- 42         # random seed passed to set.seed() before cluste
 # --- Null model parameters ---------------------------------------------------
 N_PERM          <- 999   # permutations for both null models
 NULL1_SEED      <- 1     # degree-preserving rewiring
+NULL2_SEED      <- 2     # spatial null: own seed, so 07 gives the same result
+                         # whether or not the degree-preserving null ran first
+NULL2_STABILITY_SEEDS <- 1:30   # spatial null repeated under these seeds to
+                                # document the stability of p (not to choose it)
 NULL2_MAX_GAP_FRAC <- 0.5  # spatial null: discard iteration if giant < 50 % of n
 
 # --- Egnatia validation ------------------------------------------------------
 STITCH_MAX_GAP <- 200    # metres; maximum gap tolerated when stitching route segments
+ROUTE_ON_SOURCE_TOL <- 1  # metres; every edge of the stitched route must lie within this
+                          # distance of an Itiner-e piece (no chords added by the stitching)
 VAL_BUFFERS    <- c(1000, 2500, 5000, 10000)   # buffer distances for overlap metric
+
+# Spacing (m) of the points sampled on the attested route for the independent
+# check of the PDI (mean distance to the modelled path), and buffer distances
+# for the share of the full modelled route close to the attested one.
+PDI_SAMPLE_SPACING  <- 200
+FULL_ROUTE_BUFFERS  <- c(1000, 5000)
 
 WAYPOINT_IDS <- c("DUR001", "DUR022", "DUR024", "DUR017")
 # Dyrrachium → Clodiana → Ad Quintum → Scampis (west to east)
 
 # DUR024 (Ad Quintum) corrected coordinates (UTM 34N).
 # The original digitised position was ~1 km off the known route; the
-# corrected point was derived in aggiustamento_bradaddesh.R and is now
-# encoded permanently in data/sites.gpkg. See REFACTOR_NOTES.md §2.
+# corrected point is encoded permanently in data/sites.gpkg.
 DUR024_X_FIXED <- 417306.64305036
 DUR024_Y_FIXED <- 4549673.05871444
 
@@ -91,17 +104,19 @@ SUBSAMPLE_N    <- 999    # random 71-site subsets of the Roman networks
 SUBSAMPLE_SEED <- 13
 
 # --- Regression checks -------------------------------------------------------
-# Baseline tables compared by 10_discussion_checks.R.
-REGRESSION_BASELINE_DIR <- here("tests", "discussion_checks_baseline")
-# FALSE: a value that differs from the published/baseline one is logged
-# (regression_log) and the pipeline continues, so a full re-run on new cost
-# surfaces can complete and be reviewed. TRUE: stop at the first difference.
-STRICT_REGRESSION <- FALSE
+# Baseline tables of the deterministic run: tests/baseline_v2/ for the
+# tables written up to 10, tests/baseline_v2/after_10/ for those of 11-13.
+REGRESSION_BASELINE_DIR <- here("tests", "baseline_v2")
+# TRUE: a table or checked value that differs from the baseline stops the
+# pipeline. Set to FALSE only to let a deliberate re-run complete and log the
+# differences (regression_log, output/tables/regression_log.txt).
+STRICT_REGRESSION <- TRUE
 regression_log <- character(0)
 
 # --- Figure aesthetics -------------------------------------------------------
 PHASE_COLS   <- c(hellenistic = "#D9A441", roman = "#3B6E8F")
 SCATTER_SEED <- 42   # seed for ggrepel label placement
+JITTER_SEED  <- 42   # seed for the jittered points of fig04 (appearance only)
 
 # --- Path helpers ------------------------------------------------------------
 data_path   <- function(...) here("data",   ...)
@@ -116,6 +131,7 @@ source(here("R", "functions", "network_helpers.R"))
 source(here("R", "functions", "route_helpers.R"))
 source(here("R", "functions", "pdi_validation_fixed.R"))
 source(here("R", "functions", "lcp_helpers.R"))
+source(here("R", "functions", "site_helpers.R"))
 
 #' Like stopifnot() with named conditions, but honours STRICT_REGRESSION.
 #' Use for values that depend on the cost surfaces / networks; keep stopifnot()
@@ -129,6 +145,34 @@ check_published <- function(...) {
     if (STRICT_REGRESSION) stop("Regression: ", nms[i], call. = FALSE)
     message("  CHANGED  ", nms[i])
     regression_log <<- c(regression_log, nms[i])
+  }
+  invisible(NULL)
+}
+
+#' Compare regenerated tables with the baseline CSV files in `dir`
+#'
+#' Every *.csv in `dir` must exist in output/tables/ and be all.equal()
+#' (tolerance 1e-8). Differences stop the pipeline when STRICT_REGRESSION is
+#' TRUE, otherwise they are logged in regression_log.
+regression_check <- function(dir) {
+  if (!dir.exists(dir)) {
+    message("Regression check skipped: ", dir, " not found.")
+    return(invisible(NULL))
+  }
+  files <- sort(list.files(dir, pattern = "[.]csv$", full.names = TRUE))
+  message("--- Regression check against ", dir, " (", length(files), " files) ---")
+  for (f in files) {
+    fname <- basename(f)
+    new_path <- table_path(fname)
+    result <- if (!file.exists(new_path)) "regenerated file missing" else
+      all.equal(read.csv(f, stringsAsFactors = FALSE),
+                read.csv(new_path, stringsAsFactors = FALSE), tolerance = 1e-8)
+    if (isTRUE(result)) { message("  OK  ", fname); next }
+    if (STRICT_REGRESSION)
+      stop(sprintf("Regression mismatch in %s: %s", fname,
+                   paste(result, collapse = " | ")), call. = FALSE)
+    message("  DIFF ", fname, ": ", paste(head(result, 3), collapse = " | "))
+    regression_log <<- c(regression_log, paste("baseline:", fname))
   }
   invisible(NULL)
 }

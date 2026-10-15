@@ -1,5 +1,5 @@
 # =============================================================================
-# pdi_qc_plots.R — Visual QC for PDI polygon validity (Task 3)
+# pdi_qc_plots.R — Visual QC for PDI polygon validity
 #
 # For all 9 cases (3 segments × 3 cost functions: wheeled, tobler, straight)
 # produces a PNG in output/images/qc/ overlaying:

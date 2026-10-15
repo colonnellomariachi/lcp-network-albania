@@ -5,7 +5,7 @@
 #   - Tobler (walking speed)  → used for the Hellenistic network
 #   - Wheeled transport       → used for the Roman network
 #
-# The DEM error is propagated via add_dem_error() before computing gradients.
+# Slopes are computed directly from the DEM (no simulated DEM error).
 # Both surfaces are large objects (~1.5 GB each as RDS); they are saved to
 # output/rds/ so downstream scripts can load them without recomputing.
 #
@@ -17,9 +17,9 @@
 # =============================================================================
 
 # --- DEM ---------------------------------------------------------------------
+# Used as it is: no stochastic DEM error is added, so the cost surfaces are
+# fully deterministic.
 dem <- rast(data_path("dem.tif"))
-set.seed(DEM_ERROR_SEED)   # add_dem_error() uses rnorm(); see 00_setup.R
-dem <- add_dem_error(x = dem, rmse = DEM_RMSE, type = "u")
 
 # --- Cost surfaces -----------------------------------------------------------
 message("Computing Tobler (Hellenistic) cost surface...")

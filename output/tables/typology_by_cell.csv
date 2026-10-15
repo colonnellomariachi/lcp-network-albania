@@ -1,0 +1,67 @@
+"cell","level","row_type","category_en","category_orig","n_sites","n_categories","statistic","df","p_value","btw_median","btw_max","btw_max_site","btw_max_toponym","degree_median"
+"H-T","tipo_sito","kruskal_wallis","(all)","(all)",70,4,5.53201241961404,3,0.13673640846551,NA,NA,NA,NA,NA
+"H-T","tipo_sito","category","rural settlement","rural settlement",38,NA,NA,NA,NA,0.00271131734705765,0.128364389233954,"DUR003","Hamallaj",41
+"H-T","tipo_sito","category","minor settlement","minor settlement",25,NA,NA,NA,NA,0.00244463005487266,0.0387595134241246,"DUR038","Rubjek",22
+"H-T","tipo_sito","category","urban settlement","urban settlement",4,NA,NA,NA,NA,5.175983436853e-05,0.00379650263519023,"DUR001","Durres",4
+"H-T","tipo_sito","category","sacred place","sacred place",3,NA,NA,NA,NA,0.00379650263519023,0.0337300455016117,"DUR060","Qerret",43
+"H-T","def_sito","kruskal_wallis","(all)","(all)",71,9,11.8532304103043,8,0.157873497171888,NA,NA,NA,NA,NA
+"H-T","def_sito","category","generic settlement","insediamento generico",25,NA,NA,NA,NA,0.0029336574272257,0.0247307324011796,"DUR045","Tilaj",42
+"H-T","def_sito","category","farmstead","fattoria",15,NA,NA,NA,NA,0.0024889772668896,0.128364389233954,"DUR003","Hamallaj",40
+"H-T","def_sito","category","fortified centre","centro fortificato",9,NA,NA,NA,NA,0,0.0230192753446592,"DUR032","Dorez",12
+"H-T","def_sito","category","funerary complex","complesso funerario",8,NA,NA,NA,NA,0.00128055586036657,0.0115738426677081,"DUR117","Kashar",21.5
+"H-T","def_sito","category","villa","villa",4,NA,NA,NA,NA,0.00990111009332824,0.024785879308433,"DUR129","Shijak",34.5
+"H-T","def_sito","category","city","città",3,NA,NA,NA,NA,0.00010351966873706,0.00379650263519023,"DUR001","Durres",5
+"H-T","def_sito","category","necropolis","necropoli",3,NA,NA,NA,NA,0.0156013532657928,0.0387595134241246,"DUR038","Rubjek",35
+"H-T","def_sito","category","sanctuary","santuario",3,NA,NA,NA,NA,0.00379650263519023,0.00379650263519023,"DUR018","Kenete",43
+"H-T","def_sito","category","Early Christian basilica","basilica paleocristiana",1,NA,NA,NA,NA,0.0337300455016117,0.0337300455016117,"DUR060","Qerret",52
+"R-W","tipo_sito","kruskal_wallis","(all)","(all)",94,4,13.8464472155151,3,0.00312179288029329,NA,NA,NA,NA,NA
+"R-W","tipo_sito","category","minor settlement","minor settlement",50,NA,NA,NA,NA,0.000273070468179852,0.101873248953627,"DUR050","Cete",6
+"R-W","tipo_sito","category","rural settlement","rural settlement",34,NA,NA,NA,NA,0.00546125947014246,0.0625015804750088,"DUR046","Vrap",10
+"R-W","tipo_sito","category","sacred place","sacred place",5,NA,NA,NA,NA,0.0444195475946904,0.0925601341320117,"DUR002","Arapaj",15
+"R-W","tipo_sito","category","urban settlement","urban settlement",5,NA,NA,NA,NA,0,0.00748580826280307,"DUR001","Durres",1
+"R-W","def_sito","kruskal_wallis","(all)","(all)",94,12,30.0523551855541,11,0.00155487227429837,NA,NA,NA,NA,NA
+"R-W","def_sito","category","generic settlement","insediamento generico",25,NA,NA,NA,NA,0.00126693909242287,0.0703345244032626,"DUR033","Petra, Shkumbin e Kavaje",8
+"R-W","def_sito","category","fortified centre","centro fortificato",12,NA,NA,NA,NA,0,0.000240711057681605,"DUR080","Bashtove",1
+"R-W","def_sito","category","funerary complex","complesso funerario",12,NA,NA,NA,NA,0.00104253920493046,0.0740667581117153,"DUR062","kodra e Varrit",5
+"R-W","def_sito","category","farmstead","fattoria",10,NA,NA,NA,NA,0.00266547207869581,0.0530692531594064,"DUR126","Rrashbull",14
+"R-W","def_sito","category","villa","villa",10,NA,NA,NA,NA,0.0278131450123364,0.0625015804750088,"DUR046","Vrap",9.5
+"R-W","def_sito","category","necropolis","necropoli",7,NA,NA,NA,NA,0.0105050526123718,0.101873248953627,"DUR050","Cete",14
+"R-W","def_sito","category","Early Christian basilica","basilica paleocristiana",5,NA,NA,NA,NA,0.0444195475946904,0.0925601341320117,"DUR002","Arapaj",15
+"R-W","def_sito","category","road station (mansio/statio)","mansio/statio",5,NA,NA,NA,NA,0.00257129499766246,0.024324802587192,"DUR054","Kryeluz",4
+"R-W","def_sito","category","city","città",3,NA,NA,NA,NA,0.000233754090696587,0.00748580826280307,"DUR001","Durres",2
+"R-W","def_sito","category","burial","sepoltura",2,NA,NA,NA,NA,0.00426601215521272,0.0073632538569425,"DUR140","Kodra e Kishes",3
+"R-W","def_sito","category","vicus","vicus",2,NA,NA,NA,NA,2.33754090696587e-05,4.67508181393174e-05,"DUR067","Rrogozhine",4
+"R-W","def_sito","category","monastic complex","complesso monastico",1,NA,NA,NA,NA,0.035245755271873,0.035245755271873,"DUR070","Karpen",13
+"H-W","tipo_sito","kruskal_wallis","(all)","(all)",70,4,5.08792621636253,3,0.165470819858325,NA,NA,NA,NA,NA
+"H-W","tipo_sito","category","rural settlement","rural settlement",38,NA,NA,NA,NA,0,0.169979296066253,"DUR063","Luz i Vogel",25
+"H-W","tipo_sito","category","minor settlement","minor settlement",25,NA,NA,NA,NA,0,0.216938118242466,"DUR033","Petra, Shkumbin e Kavaje",4
+"H-W","tipo_sito","category","urban settlement","urban settlement",4,NA,NA,NA,NA,0,0.0448401196227283,"DUR001","Durres",0
+"H-W","tipo_sito","category","sacred place","sacred place",3,NA,NA,NA,NA,0.0448401196227283,0.100529100529101,"DUR060","Qerret",25
+"H-W","def_sito","kruskal_wallis","(all)","(all)",71,9,16.9965597177307,8,0.0301449230082308,NA,NA,NA,NA,NA
+"H-W","def_sito","category","generic settlement","insediamento generico",25,NA,NA,NA,NA,0,0.216938118242466,"DUR033","Petra, Shkumbin e Kavaje",25
+"H-W","def_sito","category","farmstead","fattoria",15,NA,NA,NA,NA,0,0.104817115251898,"DUR126","Rrashbull",9
+"H-W","def_sito","category","fortified centre","centro fortificato",9,NA,NA,NA,NA,0,0,"DUR006","Porto Romano",1
+"H-W","def_sito","category","funerary complex","complesso funerario",8,NA,NA,NA,NA,0,0.0380952380952381,"DUR110","Fushe Qerret",3
+"H-W","def_sito","category","villa","villa",4,NA,NA,NA,NA,0.0208787669657235,0.169979296066253,"DUR063","Luz i Vogel",6.5
+"H-W","def_sito","category","city","città",3,NA,NA,NA,NA,0,0.0448401196227283,"DUR001","Durres",0
+"H-W","def_sito","category","necropolis","necropoli",3,NA,NA,NA,NA,0.0181504485852312,0.182194616977226,"DUR050","Cete",9
+"H-W","def_sito","category","sanctuary","santuario",3,NA,NA,NA,NA,0.0448401196227283,0.0448401196227283,"DUR018","Kenete",26
+"H-W","def_sito","category","Early Christian basilica","basilica paleocristiana",1,NA,NA,NA,NA,0.100529100529101,0.100529100529101,"DUR060","Qerret",10
+"R-T","tipo_sito","kruskal_wallis","(all)","(all)",94,4,10.0216247628083,3,0.0183832086100889,NA,NA,NA,NA,NA
+"R-T","tipo_sito","category","minor settlement","minor settlement",50,NA,NA,NA,NA,0.0124214443210962,0.0380077791392266,"DUR052","Lis Patros",35.5
+"R-T","tipo_sito","category","rural settlement","rural settlement",34,NA,NA,NA,NA,0.00414980061600234,0.0390838124487605,"DUR141","Bishem",42
+"R-T","tipo_sito","category","sacred place","sacred place",5,NA,NA,NA,NA,0.0127896424078484,0.0227185906748525,"DUR060","Qerret",43
+"R-T","tipo_sito","category","urban settlement","urban settlement",5,NA,NA,NA,NA,0.00208543320506091,0.002550155128918,"DUR001","Durres",8
+"R-T","def_sito","kruskal_wallis","(all)","(all)",94,12,15.1050324820788,11,0.17773881839184,NA,NA,NA,NA,NA
+"R-T","def_sito","category","generic settlement","insediamento generico",25,NA,NA,NA,NA,0.0124214443210962,0.0380077791392266,"DUR052","Lis Patros",38
+"R-T","def_sito","category","fortified centre","centro fortificato",12,NA,NA,NA,NA,0.000744253979104271,0.0324011696005684,"DUR032","Dorez",26
+"R-T","def_sito","category","funerary complex","complesso funerario",12,NA,NA,NA,NA,0.00604629519887679,0.0192965331397297,"DUR119","Allgjate",31.5
+"R-T","def_sito","category","farmstead","fattoria",10,NA,NA,NA,NA,0.00730452042139441,0.0140339521200709,"DUR131","Spanjo Qenze",46
+"R-T","def_sito","category","villa","villa",10,NA,NA,NA,NA,0.0124325119611963,0.0190119064669355,"DUR061","Rrakull",43
+"R-T","def_sito","category","necropolis","necropoli",7,NA,NA,NA,NA,0.0115489152904115,0.0225497348820906,"DUR038","Rubjek",47
+"R-T","def_sito","category","Early Christian basilica","basilica paleocristiana",5,NA,NA,NA,NA,0.0127896424078484,0.0227185906748525,"DUR060","Qerret",43
+"R-T","def_sito","category","road station (mansio/statio)","mansio/statio",5,NA,NA,NA,NA,0.0155119723898289,0.0200860693775497,"DUR102","Rromanat",10
+"R-T","def_sito","category","city","città",3,NA,NA,NA,NA,0.00208543320506091,0.002550155128918,"DUR001","Durres",11
+"R-T","def_sito","category","burial","sepoltura",2,NA,NA,NA,NA,0.0324257657397363,0.0390838124487605,"DUR141","Bishem",20.5
+"R-T","def_sito","category","vicus","vicus",2,NA,NA,NA,NA,0.0114763691598512,0.0229527383197024,"DUR067","Rrogozhine",18.5
+"R-T","def_sito","category","monastic complex","complesso monastico",1,NA,NA,NA,NA,0.00824777209503971,0.00824777209503971,"DUR070","Karpen",51

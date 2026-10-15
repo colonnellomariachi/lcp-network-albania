@@ -35,7 +35,9 @@ UPLAND_IDS_S <- c("DUR032", "DUR053", "DUR015", "DUR025")   # Dorez, Mliku,
                                                             # Zgerdesh, Shenlliu
 SENS_MEASURES <- c(top1_share = "quota 1° nodo", gini = "Gini",
                    freeman_centralization = "Freeman",
-                   median_betweenness = "betweenness mediana")
+                   median_betweenness = "betweenness mediana",
+                   top5_share = "quota primi 5 nodi",
+                   zero_share = "quota nodi a betweenness 0")
 
 nodes_hell <- readRDS(rds_path("nodes_hell.rds"))
 nodes_rom  <- readRDS(rds_path("nodes_rom.rds"))
@@ -55,7 +57,7 @@ n_hell   <- length(hell_ids)
 # (1) Construction: collapse_directional_edges() averages the two directions
 #     of each pair; the filter is cost_mean < a constant from 00_setup.R.
 #     No normalisation of costs and no relative threshold anywhere in
-#     04_networks.r / build_cell_network().
+#     04_networks.R / build_cell_network().
 # (2) Empirical: the same pairs computed within two different site sets on the
 #     same surface have identical costs, and the Hellenistic and Roman
 #     networks restricted to the dual-phase sites are the same graph.
@@ -88,7 +90,7 @@ print(indep)
 if (any(indep$n_dual_pairs != indep$n_expected) ||
     any(indep$max_abs_cost_diff_min > 1e-9) || !all(indep$same_induced_graph))
   stop("Edge construction depends on the site set: induced subgraphs are not ",
-       "valid restricted networks. Stopping (Task 10, Step 2 preliminary check).")
+       "valid restricted networks. Stopping (preliminary check).")
 message("[13] Preliminary check passed: pairwise costs and edges are independent of the site set.")
 
 # ---------------------------------------------------------------------------
@@ -126,7 +128,9 @@ write.csv(composition, table_path("sens_rom300_composition.csv"), row.names = FA
 
 conc_full <- function(g, k) {
   r <- concentration_row(g, k); names(r)[1] <- "network"
-  r$median_betweenness <- median(igraph::betweenness(g, normalized = TRUE))
+  b <- igraph::betweenness(g, normalized = TRUE)
+  r$median_betweenness <- median(b)
+  r$zero_share         <- mean(b == 0)
   r
 }
 concentration <- do.call(rbind, lapply(names(nets), function(k) conc_full(nets[[k]], k)))
@@ -196,8 +200,11 @@ subsample_measures <- function(g, size, n, seed) {
       gini = gini(b),
       freeman_centralization =
         igraph::centr_betw(sub, directed = FALSE, normalized = TRUE)$centralization,
-      median_betweenness = median(b))
-  }, numeric(4)))
+      median_betweenness = median(b),
+      # computed on the same subsets (same seed, same draws)
+      top5_share = if (sum(b) > 0) sum(sort(b, decreasing = TRUE)[1:5]) / sum(b) else NA_real_,
+      zero_share = mean(b == 0))
+  }, numeric(6)))
 }
 full_measures <- function(k) unlist(concentration[concentration$network == k, names(SENS_MEASURES)])
 
@@ -285,7 +292,7 @@ comp_lines <- apply(composition, 1, function(r) sprintf(
   sprintf("%s (%.1f %%)", trimws(r[["giant_size"]]), as.numeric(r[["giant_pct"]]))))
 
 md <- c(
-  "# Task 10 — Sensibilità a dimensione e orizzonte tardoantico",
+  "# Sensibilità a dimensione e orizzonte tardoantico",
   "",
   sprintf("Generato da `R/13_size_horizon_sensitivity.R` il %s. Solo numeri, nessuna interpretazione.", Sys.Date()),
   "",

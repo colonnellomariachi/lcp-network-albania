@@ -4,8 +4,12 @@
 #
 # Consolidates Q1–Q6 (chronological threshold analysis, §5.2) and the
 # road-station network analysis (§5.5) previously run in interactive sessions.
-# Q7 (late-antique horizon of the Roman network, Task 9 / reviewer 1) mirrors
+# Q7 (late-antique horizon of the Roman network, reviewer 1) mirrors
 # Q1 at the other end of the Roman window.
+# Two descriptive tables for the Results: site_typology.csv
+# (def_sito within tipo_sito, by site set) and egnatia_certain_vs_conjectured.csv
+# (segment 1 of the Egnatia split into the Itiner-e certain / conjectured
+# stretches; requires the objects of 08).
 # No analytical parameters are changed; this script only formalises the
 # provenance of numbers already in the manuscript.
 #
@@ -27,13 +31,9 @@
 # Q4 is placed last in this script to avoid ordering problems when sourced
 # in isolation; in the full pipeline it always has the file available.
 #
-# Regression baseline: tests/discussion_checks_baseline/<file>.csv
-# To initialise the baseline directory (run once after generating the first
-# canonical outputs):
-#   dir.create(here("tests","discussion_checks_baseline"), recursive=TRUE)
-#   for (f in list.files(table_path(), pattern="^(q[1-7]_|road_|station_)",
-#                        full.names=TRUE))
-#     file.copy(f, here("tests","discussion_checks_baseline",basename(f)))
+# The values asserted with check_published() and the regression baselines
+# (REGRESSION_BASELINE_DIR, tests/baseline_v2/) are those of the deterministic
+# run (no DEM error).
 # =============================================================================
 
 # ---------------------------------------------------------------------------
@@ -205,8 +205,8 @@ q3 <- q3[order(-q3$betweenness_norm), ]
 
 check_published(
   "Q3 rank-1 must be DUR003"       = q3$id_sito[1] == "DUR003",
-  "Q3 rank-2 must be DUR032"       = q3$id_sito[2] == "DUR032",
-  "DUR044 must be post_146 = TRUE" = isTRUE(q3$post_146[q3$id_sito == "DUR044"])
+  "Q3 rank-2 must be DUR038"       = q3$id_sito[2] == "DUR038",
+  "Q3: no post-146 site in the top ten" = !any(q3$post_146)
 )
 message("Q3: DUR003 betweenness = ", round(q3$betweenness_norm[1], 4),
         " | any post-146 in top-10: ", any(q3$post_146, na.rm = TRUE))
@@ -295,9 +295,9 @@ road_check <- station_cc[order(station_cc$id_sito),
 
 check_published(
   "median mansio must equal baseline" =
-    abs(median_mansio - 0.000467508181393174) < 1e-12,
+    abs(median_mansio - 0.00257129499766246) < 1e-12,
   "median minor settlement must equal baseline" =
-    abs(median_minor  - 0.000455206448902711) < 1e-12,
+    abs(median_minor  - 0.000273070468179853) < 1e-12,
   "n minor settlement sites must be 50" =
     nrow(minor_set_btw) == 50L
 )
@@ -327,9 +327,10 @@ st_mod <- st_mod[order(st_mod$id_sito),
                     "comune", "localita", "betweenness_norm", "degree")]
 
 check_published(
-  "DUR054 must be in module 6"        = st_mod$module[st_mod$id_sito == "DUR054"] == 6L,
-  "DUR102 must be in module 3"        = st_mod$module[st_mod$id_sito == "DUR102"] == 3L,
+  "DUR054 must be in module 5"        = st_mod$module[st_mod$id_sito == "DUR054"] == 5L,
+  "DUR102 must be in module 1"        = st_mod$module[st_mod$id_sito == "DUR102"] == 1L,
   "DUR054 n_members must be 22"       = st_mod$n_members[st_mod$id_sito == "DUR054"] == 22L,
+  "DUR102 n_members must be 18"       = st_mod$n_members[st_mod$id_sito == "DUR102"] == 18L,
   "DUR022 module must be NA (outside giant)" =
     is.na(st_mod$module[st_mod$id_sito == "DUR022"])
 )
@@ -381,7 +382,7 @@ station_neighbors <- station_neighbors[
 rownames(station_neighbors) <- NULL
 
 check_published(
-  "station_neighbors must have 23 rows" = nrow(station_neighbors) == 23L
+  "station_neighbors must have 27 rows" = nrow(station_neighbors) == 27L
 )
 message("Station neighbors: ", nrow(station_neighbors), " rows")
 
@@ -444,8 +445,8 @@ check_published(
     station_roles$role[station_roles$id_sito == "DUR054"] == "hub locale",
   "DUR102 role must be 'hub locale'"  =
     station_roles$role[station_roles$id_sito == "DUR102"] == "hub locale",
-  "DUR054 prop_inter must be 0.20"    =
-    abs(station_roles$prop_inter[station_roles$id_sito == "DUR054"] - 0.20) < 1e-10,
+  "DUR054 prop_inter must be 2/12"    =
+    abs(station_roles$prop_inter[station_roles$id_sito == "DUR054"] - 2 / 12) < 1e-10,
   "DUR102 prop_inter must be 0.25"    =
     abs(station_roles$prop_inter[station_roles$id_sito == "DUR102"] - 0.25) < 1e-10
 )
@@ -589,7 +590,7 @@ for (sid in Q7_FOCUS_IDS) {
                   r$degree, r$in_roman_end300))
 }
 
-# Stop criterion (Task 9): the upland-centre reading in 11 relies on Dorez and
+# Stop criterion: the upland-centre reading in 11 relies on Dorez and
 # Mliku being in the Roman network independently of the late-antique phase.
 stopifnot(
   "Q7 start >= AD 300 count must be 9"       = n_ge300 == 9L,
@@ -606,47 +607,178 @@ write.csv(q7_out, table_path("q7_late_antique_horizon.csv"), row.names = FALSE)
 message("Saved q7_late_antique_horizon.csv")
 
 # ---------------------------------------------------------------------------
+# Site typology — def_sito within tipo_sito, by site set
+# ---------------------------------------------------------------------------
+
+# Labels (TIPO_EN, DEF_EN, "città" repaired) from read_site_labels(),
+# R/functions/site_helpers.R; missing labels counted as "(missing)".
+typ <- read_site_labels()[, c("id_sito", "tipo_orig", "def_orig")]
+names(typ) <- c("id_sito", "tipo_sito", "def_sito")
+typ$hell <- typ$id_sito %in% hell_ids
+typ$rom  <- typ$id_sito %in% rom_ids
+typ$dual <- typ$id_sito %in% dual_ids
+
+count_sets <- function(d) data.frame(n_dataset = nrow(d), n_hellenistic = sum(d$hell),
+                                     n_roman = sum(d$rom), n_dual = sum(d$dual))
+tipo_order <- names(TIPO_EN)[names(TIPO_EN) %in% typ$tipo_sito]
+site_typology <- do.call(rbind, c(lapply(tipo_order, function(tp) {
+  d    <- typ[typ$tipo_sito == tp, ]
+  defs <- names(sort(table(d$def_sito), decreasing = TRUE))
+  rbind(
+    do.call(rbind, lapply(defs, function(df) cbind(
+      data.frame(row_type = "type", tipo_sito_en = TIPO_EN[[tp]], def_sito_en = DEF_EN[[df]],
+                 tipo_sito_orig = tp, def_sito_orig = df),
+      count_sets(d[d$def_sito == df, ])))),
+    cbind(data.frame(row_type = "category total", tipo_sito_en = TIPO_EN[[tp]],
+                     def_sito_en = "(all)", tipo_sito_orig = tp, def_sito_orig = "(all)"),
+          count_sets(d)))
+}), list(cbind(data.frame(row_type = "grand total", tipo_sito_en = "(all)", def_sito_en = "(all)",
+                          tipo_sito_orig = "(all)", def_sito_orig = "(all)"),
+               count_sets(typ)))))
+rownames(site_typology) <- NULL
+
+stopifnot("site typology totals must be 143 / 71 / 94 / 46" =
+            identical(unlist(site_typology[site_typology$row_type == "grand total",
+                                           c("n_dataset", "n_hellenistic", "n_roman", "n_dual")],
+                             use.names = FALSE), c(143L, 71L, 94L, 46L)))
+hell_cats <- unique(typ$tipo_sito[typ$hell])
+message("Site typology: tipo_sito categories in the Hellenistic network: ", length(hell_cats),
+        " (", paste(hell_cats, collapse = ", "), "); unclassified Hellenistic sites: ",
+        paste(typ$id_sito[typ$hell & typ$tipo_sito == "(missing)"], collapse = ", "))
+print(site_typology)
+write.csv(site_typology, table_path("site_typology.csv"), row.names = FALSE)
+message("Saved site_typology.csv")
+
+# ---------------------------------------------------------------------------
+# Egnatia segment 1: certain vs conjectured stretches
+#   [requires the objects of 08]
+#
+# The attested line of segment 1 (DUR001 -> DUR022) is the one used in 08
+# (egnatia_known_segments.rds). Each of its edges is assigned to the Itiner-e
+# stretch (gpkg fid) it lies on. The segment is the continuous sequence
+# 3084, 3083, 3085, 3087, 3088, 3089, 3086 and the western part of 3090: an
+# edge lying on no stretch (for example a straight stitching chord) stops the
+# script.
+# Containment and distance use the sample points of 08 (corridor quantiles:
+# max(50, length / 100) points, quantiles over every corridor cell) and of
+# pdi_independent_check.csv (one point every PDI_SAMPLE_SPACING m), each
+# point assigned to the part it lies on; the "whole segment" rows must
+# reproduce those two tables.
+# ---------------------------------------------------------------------------
+EGN_CERTAIN_FIDS <- c(3085, 3086)   # stretches classified "Certain" in Itiner-e
+
+itin <- sf::st_read(data_path("egnatia_itinere.gpkg"), quiet = TRUE, fid_column_name = "fid") %>%
+  dplyr::filter(Name == "Dyrrhachium-Scampis") %>%
+  sf::st_transform(CRS_UTM)
+stopifnot("Itiner-e certain stretches changed" =
+            setequal(itin$fid[itin$Segment_s == "Certain"], EGN_CERTAIN_FIDS))
+
+seg1 <- readRDS(rds_path("egnatia_known_segments.rds"))[[1]]
+seg1_label <- paste(WAYPOINT_IDS[1], WAYPOINT_IDS[2], sep = " -> ")
+seg1_xy  <- sf::st_coordinates(seg1)[, 1:2]
+edge_len <- sqrt(rowSums(diff(seg1_xy)^2))
+edge_mid <- sf::st_as_sf(data.frame(x = (seg1_xy[-1, 1] + seg1_xy[-nrow(seg1_xy), 1]) / 2,
+                                    y = (seg1_xy[-1, 2] + seg1_xy[-nrow(seg1_xy), 2]) / 2),
+                         coords = c("x", "y"), crs = CRS_UTM)
+edge_d   <- sf::st_distance(edge_mid, itin)
+edge_fid <- itin$fid[apply(edge_d, 1, which.min)]
+stopifnot("segment 1 has edges off the Itiner-e stretches" =
+            all(apply(edge_d, 1, min) <= ROUTE_ON_SOURCE_TOL))
+edge_part <- ifelse(edge_fid %in% EGN_CERTAIN_FIDS, "certain", "conjectured")
+
+# One MULTILINESTRING per part, from the runs of consecutive edges
+part_geom <- lapply(c("certain", "conjectured"), function(p) {
+  r    <- rle(edge_part == p)
+  ends <- cumsum(r$lengths); starts <- ends - r$lengths + 1
+  runs <- which(r$values)
+  sf::st_sfc(sf::st_multilinestring(lapply(runs, function(k)
+    seg1_xy[starts[k]:(ends[k] + 1), ])), crs = CRS_UTM)
+})
+names(part_geom) <- c("certain", "conjectured")
+part_of <- function(pts) {
+  d <- sapply(part_geom, function(g) as.numeric(sf::st_distance(pts, g)))
+  names(part_geom)[apply(d, 1, which.min)]
+}
+
+seg_len  <- as.numeric(sf::st_length(seg1))
+part_len <- tapply(edge_len, edge_part, sum)[names(part_geom)]
+stopifnot("parts must sum to the segment length" = abs(sum(part_len) - seg_len) < 1e-6)
+fid_len <- tapply(edge_len, edge_fid, sum)
+message(sprintf("Segment 1 (%.0f m): certain %.0f m, conjectured %.0f m",
+                seg_len, part_len["certain"], part_len["conjectured"]))
+message("  length per Itiner-e fid (m): ",
+        paste(sprintf("%s %.0f", names(fid_len), fid_len), collapse = ", "))
+
+# Sample points of 08: corridor containment and PDI sampling check
+n_cont   <- max(50L, ceiling(seg_len / 100))
+pts_cont <- sf::st_cast(sf::st_line_sample(sf::st_geometry(seg1), n = n_cont), "POINT")
+pts_pdi  <- sf::st_cast(sf::st_line_sample(sf::st_geometry(seg1),
+                                           density = 1 / PDI_SAMPLE_SPACING), "POINT")
+part_cont <- part_of(pts_cont)
+part_pdi  <- part_of(pts_pdi)
+
+PART_SETS <- list("certain"       = "certain",
+                  "conjectured"   = "conjectured",
+                  "whole segment" = names(part_geom))
+part_fids <- function(set)
+  paste(sort(unique(edge_fid[edge_part %in% set])), collapse = ";")
+
+cert_conj <- do.call(rbind, lapply(c("wheeled", "tobler"), function(fn) {
+  corr  <- readRDS(rds_path(sprintf("corr_%s.rds", fn)))
+  vals  <- as.numeric(terra::values(corr, na.rm = TRUE))
+  q_val <- quantile(vals, c(0.05, 0.10, 0.25))
+  ext   <- terra::extract(corr, terra::vect(sf::st_as_sf(pts_cont)))[, 2]
+  lcp   <- readRDS(rds_path(sprintf("lcp_egnatia_%s_seg1.rds", fn)))
+  dist  <- as.numeric(sf::st_distance(pts_pdi, sf::st_geometry(lcp)))
+  do.call(rbind, lapply(names(PART_SETS), function(p) {
+    ic <- part_cont %in% PART_SETS[[p]]; ip <- part_pdi %in% PART_SETS[[p]]
+    data.frame(
+      segment = seg1_label,
+      part = p, itinere_fids = part_fids(PART_SETS[[p]]),
+      length_m = sum(part_len[PART_SETS[[p]]]),
+      share_of_segment = sum(part_len[PART_SETS[[p]]]) / seg_len,
+      cost_function = if (fn == "wheeled") "wheeled transport" else "tobler",
+      n_pts_corridor = sum(ic),
+      n_pts_corridor_na = sum(is.na(ext[ic])),
+      prop_q05 = mean(ext[ic] <= q_val[1], na.rm = TRUE),
+      prop_q10 = mean(ext[ic] <= q_val[2], na.rm = TRUE),
+      prop_q25 = mean(ext[ic] <= q_val[3], na.rm = TRUE),
+      n_pts_200m = sum(ip),
+      mean_dist_to_lcp_m = round(mean(dist[ip]), 1),
+      max_dist_to_lcp_m  = round(max(dist[ip]), 1),
+      stringsAsFactors = FALSE)
+  }))
+}))
+
+# BLOCKING: the "whole segment" rows reproduce the tables of 08
+whole <- cert_conj[cert_conj$part == "whole segment", ]
+cont08 <- read.csv(table_path("egnatia_corridor_containment.csv"), stringsAsFactors = FALSE)
+cont08 <- cont08[cont08$segment == whole$segment[1], ]
+indep08 <- read.csv(table_path("pdi_independent_check.csv"), stringsAsFactors = FALSE)
+indep08 <- indep08[indep08$segment == whole$segment[1], ]
+for (k in seq_len(nrow(whole))) {
+  ref_col <- if (whole$cost_function[k] == "tobler") "prop_tobler" else "prop_wheeled"
+  ind <- indep08[indep08$cost_function == whole$cost_function[k], ]
+  stopifnot(
+    "whole-segment containment must reproduce egnatia_corridor_containment.csv" =
+      isTRUE(all.equal(unname(unlist(whole[k, c("prop_q05", "prop_q10", "prop_q25")])),
+                       cont08[[ref_col]][match(c(0.05, 0.10, 0.25), cont08$cost_quantile)])),
+    "whole-segment distances must reproduce pdi_independent_check.csv" =
+      whole$n_pts_200m[k] == ind$n_sample_pts &&
+      whole$mean_dist_to_lcp_m[k] == ind$mean_dist_to_lcp_m &&
+      whole$max_dist_to_lcp_m[k]  == ind$max_dist_to_lcp_m)
+}
+print(cert_conj)
+write.csv(cert_conj, table_path("egnatia_certain_vs_conjectured.csv"), row.names = FALSE)
+message("Saved egnatia_certain_vs_conjectured.csv")
+
+# ---------------------------------------------------------------------------
 # Regression check
 # ---------------------------------------------------------------------------
 
-baseline_dir <- REGRESSION_BASELINE_DIR
-if (!dir.exists(baseline_dir)) {
-  message("\nRegression check skipped: baseline directory not found.")
-  message("Initialise with:")
-  message("  dir.create(here('tests','discussion_checks_baseline'),",
-          " recursive=TRUE)")
-  message("  for (f in list.files(table_path(),",
-          " pattern='^(q[1-7]_|road_|station_)', full.names=TRUE))")
-  message("    file.copy(f,",
-          " here('tests','discussion_checks_baseline',basename(f)))")
-} else {
-  baseline_files <- list.files(baseline_dir, pattern = "\\.csv$",
-                               full.names = TRUE)
-  if (length(baseline_files) == 0L) {
-    message("\nRegression check: baseline directory empty — skipped.")
-  } else {
-    message("\n--- Regression check (", length(baseline_files),
-            " files) ---")
-    for (f in sort(baseline_files)) {
-      fname    <- basename(f)
-      new_path <- table_path(fname)
-      if (!file.exists(new_path)) {
-        stop("Regression: regenerated file missing: ", fname)
-      }
-      baseline <- read.csv(f,        stringsAsFactors = FALSE)
-      new_file <- read.csv(new_path, stringsAsFactors = FALSE)
-      result   <- all.equal(baseline, new_file, tolerance = 1e-8)
-      if (!isTRUE(result)) {
-        if (STRICT_REGRESSION)
-          stop(sprintf("Regression mismatch in %s: %s",
-                       fname, paste(result, collapse = " | ")))
-        message("  DIFF ", fname, ": ", paste(head(result, 3), collapse = " | "))
-        regression_log <- c(regression_log, paste("baseline:", fname))
-      } else message("  OK  ", fname)
-    }
-    message("Regression check done: ", length(regression_log),
-            " difference(s) logged in regression_log.")
-  }
-}
+# Tables produced up to this script (04-10) are compared with the CSV files
+# in REGRESSION_BASELINE_DIR; tables of 11-13 are checked at the end of
+# run_all.R against REGRESSION_BASELINE_DIR/after_10.
+regression_check(REGRESSION_BASELINE_DIR)
 
 message("\n10_discussion_checks.R complete.")

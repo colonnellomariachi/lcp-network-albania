@@ -1,0 +1,7 @@
+"id_sito","def_sito","tipo_sito","top_ant","comune","localita","Longit","Latitud","earliest_start","latest_end","in_hellenistic","in_roman","dual_phase"
+"DUR044","insediamento generico","minor settlement",NA,"Hardishta","Hardishta","380787.707455158","4573761.47948427",-100,300,TRUE,TRUE,TRUE
+"DUR110","complesso funerario","rural settlement",NA,"Kryevidh","Fushe Qerret",NA,NA,-100,200,TRUE,TRUE,TRUE
+"DUR116","complesso funerario","minor settlement",NA,NA,"Valias",NA,NA,-100,100,TRUE,TRUE,TRUE
+"DUR117","complesso funerario","minor settlement",NA,NA,"Kashar",NA,NA,-100,100,TRUE,TRUE,TRUE
+"DUR118","complesso funerario","minor settlement",NA,NA,"Paskuqan",NA,NA,-100,100,TRUE,TRUE,TRUE
+"DUR126","fattoria","rural settlement",NA,"Durres","Rrashbull",NA,NA,-100,300,TRUE,TRUE,TRUE

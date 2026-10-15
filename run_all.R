@@ -59,10 +59,6 @@ source(here("R", "07_null_models.R"))
 message("\n[08] Egnatia validation...")
 source(here("R", "08_egnatia_validation.R"))
 
-# 09 — Figures
-message("\n[09] Figures...")
-source(here("R", "09_figures.R"))
-
 # 10 — Discussion checks (Q1–Q6, road-station network roles)
 message("\n[10] Discussion checks...")
 source(here("R", "10_discussion_checks.R"))
@@ -71,6 +67,10 @@ source(here("R", "10_discussion_checks.R"))
 message("\n[11] Cost-function factorial design...")
 source(here("R", "11_cost_function_factorial.R"))
 
+# 09 — Figures (after 11: fig02–fig05 and fig07 read its objects and tables)
+message("\n[09] Figures...")
+source(here("R", "09_figures.R"))
+
 # 12 — Hydrographic sensitivity [SLOW first run: 8 penalised LCP sets, ~3.5 h]
 message("\n[12] Hydrographic sensitivity (SLOW)...")
 source(here("R", "12_hydrographic_sensitivity.R"))
@@ -78,6 +78,9 @@ source(here("R", "12_hydrographic_sensitivity.R"))
 # 13 — Size and late-antique horizon sensitivity (induced subgraphs, no LCPs)
 message("\n[13] Size / horizon sensitivity...")
 source(here("R", "13_size_horizon_sensitivity.R"))
+
+# Tables produced after 10 (11-13)
+regression_check(file.path(REGRESSION_BASELINE_DIR, "after_10"))
 
 # Values that differ from the published ones / regression baselines
 if (length(regression_log)) {

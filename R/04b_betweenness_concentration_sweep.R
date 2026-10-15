@@ -2,7 +2,7 @@
 # 04b_betweenness_concentration_sweep.R — Betweenness concentration across
 #   cost-distance thresholds
 #
-# For each threshold in THRESH_SEQ, rebuilds both networks and computes four
+# For each threshold in CONC_SWEEP_SEQ, rebuilds both networks and computes four
 # concentration metrics on the normalised betweenness distribution:
 #   top1_share    — fraction of total betweenness held by the single top node
 #   ratio_1st_2nd — ratio of the top node to the second-highest node
@@ -49,11 +49,9 @@ concentration_at <- function(edges, nodes, t, phase) {
   )
 }
 
-THRESH_SEQ <- seq(90, 300, by = 30)
-
 conc <- bind_rows(
-  lapply(THRESH_SEQ, function(t) concentration_at(edges_hell, nodes_hell, t, "hellenistic")),
-  lapply(THRESH_SEQ, function(t) concentration_at(edges_rom,  nodes_rom,  t, "roman"))
+  lapply(CONC_SWEEP_SEQ, function(t) concentration_at(edges_hell, nodes_hell, t, "hellenistic")),
+  lapply(CONC_SWEEP_SEQ, function(t) concentration_at(edges_rom,  nodes_rom,  t, "roman"))
 )
 
 print(conc, digits = 3)

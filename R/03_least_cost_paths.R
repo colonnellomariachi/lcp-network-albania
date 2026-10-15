@@ -5,10 +5,11 @@
 # surface. Paths and costs are computed by compute_lcps_graph()
 # (R/functions/lcp_helpers.R), which performs the same computation as
 # leastcostpath::create_lcp() but builds the routing graph once per surface
-# (~25 min per network instead of ~5 h; verified identical in Task 9).
+# (~25 min per network instead of ~5 h; verified to give identical costs,
+# geometries and cells).
 #
 # The two networks keep the output schemas of the first submission, which
-# 04_networks.r expects:
+# 04_networks.R expects:
 #   Hellenistic — "fete" schema (origin_ID / destination_ID), as produced by
 #                 create_FETE_lcps()
 #   Roman       — "loop" schema (fromCell / toCell only), as produced by the
